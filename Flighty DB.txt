@@ -1,0 +1,17 @@
+Session
+	- ID (PK) (user id?)
+	- Channel ID
+	/ - Message ID
+
+Flight
+	- Session ID (FK)
+	- Delay
+	- Departure Time
+	- Sced. Arrival Time
+	- Dept. Terminal
+	- Dept. Gate
+	- Arrival Terminal
+	- Arrival Gate
+	- Arrival APC
+	- Dept. APC
+	- Coordinates
