@@ -2,9 +2,11 @@ Session
 	- ID (PK) (user id?)
 	- Channel ID
 	/ - Message ID
+	- NumFlights
 
 Flight
-	- Session ID (FK)
+	- User ID (FK)
+	- Internal Flight ID
 	- Delay
 	- Departure Time
 	- Sced. Arrival Time
@@ -15,3 +17,28 @@ Flight
 	- Arrival APC
 	- Dept. APC
 	- Coordinates
+
+
+Session
+CREATE TABLE `Session` (
+	`UserID` INT NOT NULL,
+	`MessageID` INT,
+	`NumFlights` INT NOT NULL,
+	PRIMARY KEY (`UserID`)
+);
+
+Flight
+CREATE TABLE `Flight` (
+	`UserID` VARCHAR NOT NULL,
+	`InternalFlightID` INT NOT NULL,
+	`Delay` INT NOT NULL,
+	`DepartureTime` VARCHAR NOT NULL,
+	`SchedArrivalTime` VARCHAR NOT NULL,
+	`DepartTerminal` VARCHAR NOT NULL,
+	`DepartGate` VARCHAR NOT NULL,
+	`ArriveTerminal` VARCHAR NOT NULL,
+	`ArriveGate` VARCHAR NOT NULL,
+	`ArriveAPC` VARCHAR NOT NULL,
+	`DepartAPC` VARCHAR NOT NULL,
+	`Coords` VARCHAR NOT NULL
+);
