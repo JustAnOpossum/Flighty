@@ -1,5 +1,6 @@
 import sqlite3
 from os.path import exists
+from flightTracking import getFlight
 
 credentials = open("credentials.txt", "r")
 #TODO process keys and tokens
@@ -10,6 +11,14 @@ def main():
     if(not exists("flighty.db")):
         makeDB("flighty.db")
     else: print("The Database already exists, skipping database creation.")
+    #get a flight code from user
+    flightCode = input("Please Enter a Flight which you wish to track:\n")
+    #searcg flight tracker to see if flight exists
+    flightData = getFlight("UAL4")
+    #if flight does not exist, print an error
+        #FIXME
+    #if flight does exist, print the response / json
+    print(flightData)
 
 def makeDB(fName):
     try:    
