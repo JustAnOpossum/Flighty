@@ -2,11 +2,12 @@
 
 import requests
 import json
+from credentials import *
 
 #Tracks a single flight and returns important information
 def getFlight(flightID):
     #variable setup
-    apiKey = "UtAeSw40Z24kerztlv9fuBX4OI24Ey7A"
+    apiKey = getKey('Flight_Aware')
     flightID = "UAL4"
     apiUrl = "https://aeroapi.flightaware.com/aeroapi/"
     auth_header = {'x-apikey':apiKey}
