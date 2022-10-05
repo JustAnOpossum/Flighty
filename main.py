@@ -19,8 +19,6 @@ def main():
         print("Loading keys...")
         loadKeys("credentials.txt")
 
-    getFlightLocation("N904WN")
-
     terminalChar = 'q'
     userInput = input("Enter q to quit, press enter to continue")
     while (not userInput == terminalChar):
