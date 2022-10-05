@@ -44,7 +44,7 @@ def getFlight(flightID):
                 })
         return flights
     # if the response is unuseable
-    # else:
+    else:
         print("Error retrieving flight. Check your flight code!")
         return ({})
     # print(flights[0])
