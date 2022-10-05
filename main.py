@@ -16,14 +16,37 @@ def main():
     else:
         print("Loading keys...")
         loadKeys("credentials.txt")
-    #get a flight code from user
-    #flightCode = input("Please Enter a Flight which you wish to track:\n")
-    #searcg flight tracker to see if flight exists
-    #flightData = getFlight(flightCode)
-    #if flight does not exist, print an error
-        #FIXME
-    #if flight does exist, print the response / json
-    #print(flightData)
+
+    terminalChar = 'q'
+    userInput = input("Enter q to quit, press enter to continue")
+    while(not userInput == terminalChar):    
+        #get a flight code from user
+        flightCode = input("Please Enter a Flight which you wish to track:\n")
+        #search flight tracker to see if flight exists
+        flightData = getFlight(flightCode)
+        #if flight does not exist, print an error
+        if(flightData == None):
+            print("Flight may not exist. Try again.")
+            continue
+        #if flight does exist, print the response / json
+        print(flightData)
+        #add this data to database
+        try:
+            #connect to the database
+            con = sqlite3.connect("flighty.db")
+            cur = con.cursor()
+            con.close()
+        except sqlite3.Error as er:
+            print(er + " in main()")
+        #get new user input
+        userInput = input("Enter q to quit, press enter to continue")
+    return
+
+def queryDB(query):
+    return
+
+def addToDB(query):
+    return
 
 def makeDB(fName):
     try:    
