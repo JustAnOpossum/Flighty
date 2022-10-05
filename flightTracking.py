@@ -50,7 +50,8 @@ def JsonToDictEntry(jsonFilePath):
                 'ArvTerm':flight['terminal_destination'],
                 'ArvGate':flight['gate_destination'],
                 'ArvCode':flight['destination']['code_iata'],
-                'DepCode':flight['origin']['code_iata']
+                'DepCode':flight['origin']['code_iata'],
+                'Registration':flight['registration']
             })
     f.close()
     return
@@ -66,5 +67,3 @@ def getManyFlights(flightIDs):
 #Gets the current location for a flight, returning its corrdiantes
 def getFlightLocation(flightID):
     return
-
-#getFlight("UAL1")
