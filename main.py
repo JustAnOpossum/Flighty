@@ -3,13 +3,15 @@ from os.path import exists
 from flightTracking import *
 from credentials import *
 
-def main():
-    #if the database does not exist, we must make it, otherwise do nothing
-    if(not exists("flighty.db")):
-        makeDB("flighty.db")
-    else: print("The Database already exists, skipping database creation.")
 
-    #Loads keys for different apps
+def main():
+    # if the database does not exist, we must make it, otherwise do nothing
+    if (not exists("flighty.db")):
+        makeDB("flighty.db")
+    else:
+        print("The Database already exists, skipping database creation.")
+
+    # Loads keys for different apps
     if (not exists("credentials.txt")):
         print("No credentials file found")
         return
@@ -17,43 +19,48 @@ def main():
         print("Loading keys...")
         loadKeys("credentials.txt")
 
+    getFlightLocation("N904WN")
+
     terminalChar = 'q'
     userInput = input("Enter q to quit, press enter to continue")
-    while(not userInput == terminalChar):    
-        #get a flight code from user
+    while (not userInput == terminalChar):
+        # get a flight code from user
         flightCode = input("Please Enter a Flight which you wish to track:\n")
-        #search flight tracker to see if flight exists
+        # search flight tracker to see if flight exists
         flightData = getFlight(flightCode)
-        #if flight does not exist, print an error
-        if(flightData == None):
+        # if flight does not exist, print an error
+        if (flightData == None):
             print("Flight may not exist. Try again.")
             continue
-        #if flight does exist, print the response / json
+        # if flight does exist, print the response / json
         print(flightData)
-        #add this data to database
+        # add this data to database
         try:
-            #connect to the database
+            # connect to the database
             con = sqlite3.connect("flighty.db")
             cur = con.cursor()
             con.close()
         except sqlite3.Error as er:
             print(er + " in main()")
-        #get new user input
+        # get new user input
         userInput = input("Enter q to quit, press enter to continue")
     return
+
 
 def queryDB(query):
     return
 
+
 def addToDB(query):
     return
 
+
 def makeDB(fName):
-    try:    
-        #connect to and initialize the database file
+    try:
+        # connect to and initialize the database file
         con = sqlite3.connect(fName)
         cur = con.cursor()
-        #generate schema for Session
+        # generate schema for Session
         cur.execute("""
             CREATE TABLE `Session` (
                 `UserID` INT NOT NULL,
@@ -63,7 +70,7 @@ def makeDB(fName):
             );
         """)
 
-        #Generate schema for Flight
+        # Generate schema for Flight
         cur.execute("""
             CREATE TABLE `Flight` (
                 `UserID` VARCHAR NOT NULL,
@@ -80,11 +87,12 @@ def makeDB(fName):
                 `Coords` VARCHAR NOT NULL
             );
         """)
-        #close the connection
+        # close the connection
         con.close()
-    #exception error handling    
+    # exception error handling
     except sqlite3.Error as er:
         print(er + " in MakeDB()")
 
-if(__name__ == "__main__"):
+
+if (__name__ == "__main__"):
     main()

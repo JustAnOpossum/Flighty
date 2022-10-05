@@ -72,10 +72,21 @@ def getManyFlights(flightIDs):
 
 
 def getFlightLocation(registration):
-    url = f"https://adsbexchange-com1.p.rapidapi.com/v2/registration/{registration}"
+    url = f"https://adsbexchange-com1.p.rapidapi.com/v2/registration/{registration}/"
     headers = {
-        "X-RapidAPI-Key": "2a2f553a18msh7f35c40e76dd158p12b80bjsna711362a6d9f",
+        "X-RapidAPI-Key": getKey('Ads_B_Exchange'),
         "X-RapidAPI-Host": "adsbexchange-com1.p.rapidapi.com"
     }
 
     response = requests.request("GET", url, headers=headers)
+    resposeJSON = response.json()
+
+    if response.status_code == 200:
+        return {
+            'lat': resposeJSON['ac'][0]['lat'],
+            'lon': resposeJSON['ac'][0]['lon'],
+            'heading': resposeJSON['ac'][0]['nav_heading']
+        }
+    else:
+        print("Error getting flight location")
+        return {}
