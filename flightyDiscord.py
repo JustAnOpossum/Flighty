@@ -1,37 +1,19 @@
-#Discord.py
-#Flighty Python Bot
 import discord
-from ... import credentials
-from os import exists
-'''
-# Loads keys for different apps
-if (not exists("../credentials.txt")):
-    print("No credentials file found")
-else:
-    print("Loading keys...")
-    loadKeys("../credentials.txt")
+from discord.ext import commands
+from credentials import *
 
-print(getKey("Discord"))
-'''
-#setting gateway intents
 intents = discord.Intents.default()
 intents.message_content = True
+bot = commands.Bot(command_prefix=">", intents=intents)
 
-client = discord.Client(intents=intents)
+@bot.slash_command(name="my_slash_command")
+async def my_slash_command(ctx):
+    await ctx.respond("You entered the slash command!")
 
-#when we try and start the bot we need to ensure a connection is made.
-@client.event
-async def on_ready():
-    print(f'We have logged in as {client.user}')
+@bot.command()
+async def ping(ctx):
+    await ctx.send("pong")
 
-#when the bot sees a new message, we begin processing
-@client.event
-async def on_message(message):
-    #if the message is FROM this bot
-    if message.author == client.user:
-        return
-    #begin checking commands
-    if message.content.startswith('$hello'):
-        await message.channel.send('Hello!')
-
-#client.run('')
+loadKeys("credentials.txt")
+print(getKey("Discord"))
+bot.run(getKey("Discord"))
