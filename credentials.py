@@ -13,9 +13,8 @@ def loadKeys(configFile):
         return
     else:
         print("Loading keys...")
-        loadKeys(configFile)
         isLoaded = True
-    keys.read(configFile)
+        keys.read(configFile)
 
 # Gets a key from the config file
 

@@ -1,4 +1,3 @@
-from msilib.schema import Error
 import sqlite3
 from os.path import exists
 from typing import List
