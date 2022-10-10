@@ -1,8 +1,9 @@
+from msilib.schema import Error
 import sqlite3
 from os.path import exists
 from typing import List
 from flightTracking import *
-from credentials import *
+from "../credentials" import *
 
 
 def main():
@@ -93,15 +94,34 @@ def main():
         userInput = input("Enter q to quit, press enter to continue")
     return
 
-
+#precondition: a query is passed into 
 def queryDB(query):
+    try:
+        con = sqlite3.connect("flighty.db")
+        cur = con.cursor()
+
+    except sqlite3.Error as er:
+        print(er)
     return
 
+#precondition: data is a tuple of 13 members. This matches the Flight Database
+#postcondition: data successfully entered into Flight table.
+def addToFlightDB(data):
+    try:
+        con = sqlite3.connect("flighty.db")
+        cur = con.cursor()
 
-def addToDB(query):
+        cur.execute("INSERT INTO Flight VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data)
+        con.commit()
+        con.close()
+    except sqlite3.Error as er:
+        print(er)
     return
 
-
+#precondition: the flighty.db file does not exist
+#postcondition: flighty.db database has properly been created 
+#   with tables that contain tuples of the information we need in
+#   order to serve users a proper experience
 def makeDB(fName):
     try:
         # connect to and initialize the database file
@@ -147,7 +167,7 @@ def makeDB(fName):
         con.close()
     # exception error handling
     except sqlite3.Error as er:
-        print(er + " in MakeDB()")
+        print(er)
 
 
 if (__name__ == "__main__"):
