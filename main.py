@@ -3,7 +3,7 @@ import sqlite3
 from os.path import exists
 from typing import List
 from flightTracking import *
-from "../credentials" import *
+from credentials import *
 
 
 def main():
@@ -33,12 +33,12 @@ def main():
             print("Flight may not exist. Try again.")
             continue
         # if flight does exist, print the response / json
-        if(isinstance(flightData, List)):
+        if (isinstance(flightData, List)):
             flightData = flightData[0]
-                
+
         print(type(flightData))
         print(flightData)
-            
+
         flightID = str(flightData["flightID"])
         flightDelay = str(flightData["Delay"])
         flightDepTime = str(flightData["DepTime"])
@@ -69,22 +69,23 @@ def main():
             con = sqlite3.connect("flighty.db")
             cur = con.cursor()
             data = (
-            "1", 
-            1, 
-            int(flightDelay), 
-            flightDepTime, 
-            flightArvTime, 
-            flightDepTerm, 
-            flightDepGate, 
-            flightArvTerm, 
-            flightArvGate, 
-            flightArvCode, 
-            flightDepCode, 
-            "Coordinates not implemented yet!", 
-            flightRegistration
+                "1",
+                1,
+                int(flightDelay),
+                flightDepTime,
+                flightArvTime,
+                flightDepTerm,
+                flightDepGate,
+                flightArvTerm,
+                flightArvGate,
+                flightArvCode,
+                flightDepCode,
+                "Coordinates not implemented yet!",
+                flightRegistration
             )
-            cur.execute("INSERT INTO Flight VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data)
-            #commit issues into flighty.db
+            cur.execute(
+                "INSERT INTO Flight VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data)
+            # commit issues into flighty.db
             con.commit()
 
             con.close()
@@ -94,7 +95,9 @@ def main():
         userInput = input("Enter q to quit, press enter to continue")
     return
 
-#precondition: a query is passed into 
+# precondition: a query is passed into
+
+
 def queryDB(query):
     try:
         con = sqlite3.connect("flighty.db")
@@ -104,24 +107,29 @@ def queryDB(query):
         print(er)
     return
 
-#precondition: data is a tuple of 13 members. This matches the Flight Database
-#postcondition: data successfully entered into Flight table.
+# precondition: data is a tuple of 13 members. This matches the Flight Database
+# postcondition: data successfully entered into Flight table.
+
+
 def addToFlightDB(data):
     try:
         con = sqlite3.connect("flighty.db")
         cur = con.cursor()
 
-        cur.execute("INSERT INTO Flight VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data)
+        cur.execute(
+            "INSERT INTO Flight VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data)
         con.commit()
         con.close()
     except sqlite3.Error as er:
         print(er)
     return
 
-#precondition: the flighty.db file does not exist
-#postcondition: flighty.db database has properly been created 
+# precondition: the flighty.db file does not exist
+# postcondition: flighty.db database has properly been created
 #   with tables that contain tuples of the information we need in
 #   order to serve users a proper experience
+
+
 def makeDB(fName):
     try:
         # connect to and initialize the database file
@@ -136,13 +144,13 @@ def makeDB(fName):
                 PRIMARY KEY (`UserID`)
             );
         """)
-        #FIXME REMOVE THIS AFTER DEMO 1
+        # FIXME REMOVE THIS AFTER DEMO 1
         cur.execute(
             """
             INSERT INTO Session VALUES (1, 1, 1), (2, 2, 2), (3, 3, 3);
             """
         )
-        #FIXME REMOVE THIS ONE TOO AFTER DEMO 1
+        # FIXME REMOVE THIS ONE TOO AFTER DEMO 1
         con.commit()
 
         # Generate schema for Flight
