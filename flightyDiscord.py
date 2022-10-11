@@ -6,9 +6,9 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix=">", intents=intents)
 
-@bot.slash_command(name="my_slash_command")
-async def my_slash_command(ctx):
-    await ctx.respond("You entered the slash command!")
+@bot.slash_command(name="track_flight")
+async def track_flight(ctx):
+    await ctx.respond("Tracking Flight!")
 
 @bot.command()
 async def ping(ctx):
