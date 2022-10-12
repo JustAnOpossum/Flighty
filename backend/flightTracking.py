@@ -2,7 +2,7 @@
 
 import requests
 import json
-from credentials import *
+from backend.credentials import *
 
 loadKeys("credentials.txt")
 

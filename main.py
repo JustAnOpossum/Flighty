@@ -1,20 +1,20 @@
 import sqlite3
 from os.path import exists
 from typing import List
-from flightTracking import *
-from credentials import *
-from database import *
+from backend.flightTracking import *
+from backend.credentials import *
+from backend.database import *
 
 
 def main():
     # if the database does not exist, we must make it, otherwise do nothing
-    if (not exists("flighty.db")):
-        makeDB("flighty.db")
+    if (not exists("backend/flighty.db")):
+        makeDB("backend/flighty.db")
     else:
         print("The Database already exists, skipping database creation.")
 
     # Loads keys for different apps
-    if (not exists("credentials.txt")):
+    if (not exists("backend/credentials.txt")):
         print("No credentials file found")
         return
     else:
@@ -66,7 +66,7 @@ def main():
         # add this data to database
         try:
             # connect to the database
-            con = sqlite3.connect("flighty.db")
+            con = sqlite3.connect("backend/flighty.db")
             cur = con.cursor()
             data = (
                 "1",
@@ -93,7 +93,8 @@ def main():
             print(er)
         # get new user input
         userInput = input("Enter q to quit, press enter to continue")
-    return #end main
+    return  # end main
+
 
 if (__name__ == "__main__"):
     main()

@@ -2,6 +2,8 @@ import sqlite3
 
 # precondition: data is a tuple of 13 members. This matches the Flight Database
 # postcondition: data successfully entered into Flight table.
+
+
 def addToFlightDB(data):
     try:
         con = sqlite3.connect("flighty.db")
@@ -17,19 +19,21 @@ def addToFlightDB(data):
 
 # precondition: the flighty.db file exists.
 # postcondition: returned list of tuples containing the data from the Flight db
+
+
 def queryDB(query):
     try:
-        #initialize our db connection
+        # initialize our db connection
         con = sqlite3.connect("flighty.db")
         cur = con.cursor()
-        #execute the query
+        # execute the query
         result = cur.execute(query)
-        result = result.fetchall() #result now holds our list 
+        result = result.fetchall()  # result now holds our list
         return result
-    except sqlite3.Error as er: #error handling
+    except sqlite3.Error as er:  # error handling
         print(er)
         return None
-    
+
 
 # precondition: the flighty.db file does not exist
 # postcondition: flighty.db database has properly been created

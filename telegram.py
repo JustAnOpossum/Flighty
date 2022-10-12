@@ -1,9 +1,9 @@
-from credentials import *
+from backend.credentials import *
 import telebot
 
 
 def main():
-    loadKeys("credentials.txt")
+    loadKeys("backend/credentials.txt")
     bot = telebot.TeleBot(getKey("Telegram"))
 
     @bot.message_handler(commands=['start', 'help'])
