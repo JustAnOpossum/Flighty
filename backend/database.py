@@ -1,9 +1,11 @@
 import sqlite3
 
+    ####TODO
+    # Database function that takes userID and returns ANY tuple in the database that cooresponds to the userID, maybe in a dictionary
+
+
 # precondition: data is a tuple of 13 members. This matches the Flight Database
 # postcondition: data successfully entered into Flight table.
-
-
 def addToFlightDB(data):
     try:
         con = sqlite3.connect("backend/flighty.db")
@@ -19,8 +21,6 @@ def addToFlightDB(data):
 
 # precondition: the flighty.db file exists.
 # postcondition: returned list of tuples containing the data from the Flight db
-
-
 def queryDB(query):
     try:
         # initialize our db connection

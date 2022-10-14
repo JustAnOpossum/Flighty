@@ -9,6 +9,7 @@ from backend.database import *
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(intents=intents)
+emoteList = ['🐼','🐶','🐱','🦄','🐷','🐻‍❄️','🐋','🥳','🎈','💩']
 
 @bot.slash_command(name="track_flight")
 async def track_flight(ctx, flight_code:discord.Option(str)):
@@ -25,10 +26,30 @@ async def track_flight(ctx, flight_code:discord.Option(str)):
         #check if multiple flights exist
         print(type(flightData))
         print(len(flightData))
+    
         if(len(flightData) > 1):
             print("There are more than one flights with that flight code. We must ask the user which flight they are referring to.")
             for flight in flightData:
-                myEmbed = discord.Embed(title=f"Flight Tracker: {flight_code}", description=str(flight))
+                flightID = str(flight["flightID"])
+                flightDelay = str(flight["Delay"])
+                flightDepTime = str(flight["DepTime"])
+                flightArvTime = str(flight["ArvTime"])
+                flightDepTerm = str(flight["DepTerm"])
+                flightDepGate = str(flight["DepGate"])
+                flightArvTerm = str(flight["ArvTerm"])
+                flightArvGate = str(flight["ArvGate"])
+                flightArvCode = str(flight["ArvCode"])
+                flightDepCode = str(flight["DepCode"])
+                flightRegistration = str(flight["Registration"])
+
+                myEmbed = discord.Embed(title=f"Flight Tracker:{flight_code}\t{flightDepCode} ✈️ {flightArvCode}")
+                myEmbed.add_field(name = "Departure & Arrival", value=f"Departing: {flightDepTime} Arriving: {flightArvTime}", inline=False)
+
+                if(int(flightDelay) > 0):
+                    myEmbed.add_field(name= "Delay", value=f"{flightDelay} minute(s).", inline = True)
+
+                myEmbed.add_field(name="Departing Gate & Terminal", value=f"Terminal: {flightDepTerm} Gate: {flightDepGate}", inline=False)
+                myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {flightArvTerm} Gate: {flightArvGate}", inline=False)
                 await ctx.respond(embed=myEmbed)
         #if more than 1 exists in the API call, ask the user which flight time they are referring to
 
