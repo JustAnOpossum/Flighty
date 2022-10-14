@@ -131,3 +131,4 @@ dmypy.json
 flighty/*
 credentials.txt
 backend/credentials.txt
+.vscode

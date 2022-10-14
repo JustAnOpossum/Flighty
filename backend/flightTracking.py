@@ -2,9 +2,26 @@
 
 import requests
 import json
+import csv
 from backend.credentials import *
 
-loadKeys("credentials.txt")
+# loadKeys("credentials.txt")
+# Global var for airport locations and time zones
+airports = {}
+
+try:
+    # Loads airport CSV file for later use
+    with open('backend/airports.csv') as airportsCSV:
+        reader = csv.reader(airportsCSV, delimiter=',')
+        for row in reader:
+            # Adds time zone information and location for each IATA airport
+            newLocation = row[5].replace("POINT (", "")
+            newLocation = newLocation.replace(")", "")
+            split = newLocation.split(" ")
+            newLocation = "%s, %s" % (split[1], split[0])
+            airports[row[0]] = {'tz': row[1], 'location': newLocation}
+except:
+    print('Error opening CSV file.')
 
 # Tracks a single flight and returns important information
 
@@ -40,7 +57,11 @@ def getFlight(flightID):
                     'ArvGate': flight['gate_destination'],
                     'ArvCode': flight['destination']['code_iata'],
                     'DepCode': flight['origin']['code_iata'],
-                    'Registration': flight['registration']
+                    'Registration': flight['registration'],
+                    'ArvLocation': airports[flight['destination']['code_iata']]['location'],
+                    'DepLocation': airports[flight['origin']['code_iata']]['location'],
+                    'ArvTz': airports[flight['destination']['code_iata']]['tz'],
+                    'DepTz': airports[flight['origin']['code_iata']]['tz']
                 })
         return flights
     # if the response is unuseable

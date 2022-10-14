@@ -6,7 +6,7 @@ import sqlite3
 
 def addToFlightDB(data):
     try:
-        con = sqlite3.connect("flighty.db")
+        con = sqlite3.connect("backend/flighty.db")
         cur = con.cursor()
 
         cur.execute(
@@ -24,7 +24,7 @@ def addToFlightDB(data):
 def queryDB(query):
     try:
         # initialize our db connection
-        con = sqlite3.connect("flighty.db")
+        con = sqlite3.connect("backend/flighty.db")
         cur = con.cursor()
         # execute the query
         result = cur.execute(query)
