@@ -3,7 +3,7 @@ from backend.flightTracking import *
 import telebot
 import zulu
 from telebot import types
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import InlineKeyboardButton
 
 
 def main():
@@ -42,6 +42,10 @@ def main():
                     chatMsg = "Choose a flight:"
                     flightNum = 0
                     emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣']
+                    if flights == {} or flights == None:
+                            bot.send_message(message.chat.id, 'Please send me a valid flight number',
+                                     reply_markup=markup, parse_mode="markdown")
+                            return
                     # Formats each flight and makes sure it has a button
                     for flight in flights:
                         flightBtn = InlineKeyboardButton(
@@ -65,7 +69,27 @@ def main():
     # Handler for callback buttons
     @bot.callback_query_handler(func=lambda call: True)
     def test_callback(call):
-        print('called')
+        # TODO: Save flight to database somewhere
+        if call.from_user.id in currentFlightUsers:
+            match currentFlightUsers[call.from_user.id]['mode']:
+                case 'trackFlight':
+                    markup = types.InlineKeyboardMarkup(row_width=2)
+                    btn1 = InlineKeyboardButton("Yes", callback_data="yes")
+                    btn2 = InlineKeyboardButton("No", callback_data="no")
+                    markup.add(btn1, btn2)
+                    bot.edit_message_text(chat_id=call.message.chat.id,
+                                          text='Do you want to track any more flights?', message_id=call.message.id, reply_markup=markup)
+                    currentFlightUsers[call.from_user.id]['mode'] = 'checkForMoreFlights'
+                case 'checkForMoreFlights':
+                    if call.data == 'no':
+                        # TODO: Save last flight to database
+                        bot.edit_message_text(chat_id=call.message.chat.id,
+                                              text='Flight screne here', message_id=call.message.id)
+                        del currentFlightUsers[call.from_user.id]
+                    else:
+                        bot.edit_message_text(
+                            chat_id=call.message.chat.id, text='Please send me your flight number, ex: UA123', message_id=call.message.id)
+                        currentFlightUsers[call.from_user.id]['mode'] = 'trackFlight'
 
     print("Bot Loaded")
     bot.infinity_polling()
