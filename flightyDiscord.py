@@ -5,6 +5,7 @@ from backend.credentials import *
 from backend.flightTracking import *
 from backend.credentials import *
 from backend.database import *
+import zulu
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -42,8 +43,14 @@ async def track_flight(ctx, flight_code:discord.Option(str)):
                 flightDepCode = str(flight["DepCode"])
                 flightRegistration = str(flight["Registration"])
 
-                myEmbed = discord.Embed(title=f"Flight Tracker:{flight_code}\t{flightDepCode} ✈️ {flightArvCode}")
-                myEmbed.add_field(name = "Departure & Arrival", value=f"Departing: {flightDepTime} Arriving: {flightArvTime}", inline=False)
+                ArvTime = zulu.parse(flight['ArvTime'])
+                DepTime = zulu.parse(flight['DepTime'])
+
+                formattedArrival = ArvTime.format('%b %d %Y - %I:%M %p %Z', tz=flight['ArvTz'])
+                formattedDeaprture = DepTime.format('%b %d %Y - %I:%M %p %Z', tz=flight['DepTz'])
+
+                myEmbed = discord.Embed(title=f"Flight Tracker: {flight_code}\t{flightDepCode} ✈️ {flightArvCode}")
+                myEmbed.add_field(name = "Departure & Arrival", value=f"Departing: {formattedDeaprture} Arriving: {formattedArrival}", inline=False)
 
                 if(int(flightDelay) > 0):
                     myEmbed.add_field(name= "Delay", value=f"{flightDelay} minute(s).", inline = True)
@@ -56,8 +63,11 @@ async def track_flight(ctx, flight_code:discord.Option(str)):
         #show the user their accurate flight information.
 
         #here we are certain the flight exists, we serve the data to the user.
-        #myEmbed = discord.Embed(title=f"Flight Tracker: {flight_code}", description=str(flightData))
-        #await ctx.respond(embed=myEmbed)
+
+        #this statement is if only one flight exists in flights{}
+        elif(len(flightData) == 1):
+            await ctx.respond("hello world")
+            
 
 def main():
     loadKeys("backend/credentials.txt")
