@@ -5,11 +5,12 @@ from backend.credentials import *
 from backend.flightTracking import *
 from backend.credentials import *
 from backend.database import *
+import zulu
 
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(intents=intents)
-emoteList = ['🐼','🐶','🐱','🦄','🐷','🐻‍❄️','🐋','🥳','🎈','💩']
+emoteList = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
 
 @bot.slash_command(name="track_flight")
 async def track_flight(ctx, flight_code:discord.Option(str)):
@@ -29,35 +30,61 @@ async def track_flight(ctx, flight_code:discord.Option(str)):
     
         if(len(flightData) > 1):
             print("There are more than one flights with that flight code. We must ask the user which flight they are referring to.")
-            for flight in flightData:
-                flightID = str(flight["flightID"])
-                flightDelay = str(flight["Delay"])
-                flightDepTime = str(flight["DepTime"])
-                flightArvTime = str(flight["ArvTime"])
-                flightDepTerm = str(flight["DepTerm"])
-                flightDepGate = str(flight["DepGate"])
-                flightArvTerm = str(flight["ArvTerm"])
-                flightArvGate = str(flight["ArvGate"])
-                flightArvCode = str(flight["ArvCode"])
-                flightDepCode = str(flight["DepCode"])
-                flightRegistration = str(flight["Registration"])
 
-                myEmbed = discord.Embed(title=f"Flight Tracker:{flight_code}\t{flightDepCode} ✈️ {flightArvCode}")
-                myEmbed.add_field(name = "Departure & Arrival", value=f"Departing: {flightDepTime} Arriving: {flightArvTime}", inline=False)
+            myEmbed = discord.Embed(title=f"Flight Tracker: {flight_code}.\t Please select which flight you are referring to:")
+            myRange = range(len(flightData))
+            for flight in myRange:
+                flightID = str(flightData[flight]["flightID"])
+                flightDelay = str(flightData[flight]["Delay"])
+                flightDepTime = str(flightData[flight]["DepTime"])
+                flightArvTime = str(flightData[flight]["ArvTime"])
+                flightDepTerm = str(flightData[flight]["DepTerm"])
+                flightDepGate = str(flightData[flight]["DepGate"])
+                flightArvTerm = str(flightData[flight]["ArvTerm"])
+                flightArvGate = str(flightData[flight]["ArvGate"])
+                flightArvCode = str(flightData[flight]["ArvCode"])
+                flightDepCode = str(flightData[flight]["DepCode"])
+                flightRegistration = str(flightData[flight]["Registration"])
 
-                if(int(flightDelay) > 0):
-                    myEmbed.add_field(name= "Delay", value=f"{flightDelay} minute(s).", inline = True)
+                ArvTime = zulu.parse(flightArvTime)
+                DepTime = zulu.parse(flightDepTime)
 
-                myEmbed.add_field(name="Departing Gate & Terminal", value=f"Terminal: {flightDepTerm} Gate: {flightDepGate}", inline=False)
-                myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {flightArvTerm} Gate: {flightArvGate}", inline=False)
-                await ctx.respond(embed=myEmbed)
+                formattedArrival = ArvTime.format('%b %d %Y - %I:%M %p %Z', tz=flightData[flight]['ArvTz'])
+                formattedDeaprture = DepTime.format('%b %d %Y - %I:%M %p %Z', tz=flightData[flight]['DepTz'])
+
+                myEmbed.add_field(name = f"Flight {emoteList[flight]}:", value=f"{flightDepCode} {formattedDeaprture} ✈️ {flightArvCode} {formattedArrival}", inline=False)
+
+                #if(int(flightDelay) > 0):
+                    #myEmbed.add_field(name= "Delay", value=f"{flightDelay} minute(s).", inline = True)
+
+                #myEmbed.add_field(name="Departing Gate & Terminal", value=f"Terminal: {flightDepTerm} Gate: {flightDepGate}", inline=False)
+                #myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {flightArvTerm} Gate: {flightArvGate}", inline=False)
+            message = await ctx.send(embed=myEmbed)
+            messageID = message.id
+            print(type(message))
+            print(messageID)
+            #print(message)
+            for flight in myRange:
+                await message.add_reaction(emoteList[flight])
         #if more than 1 exists in the API call, ask the user which flight time they are referring to
 
         #show the user their accurate flight information.
 
         #here we are certain the flight exists, we serve the data to the user.
-        #myEmbed = discord.Embed(title=f"Flight Tracker: {flight_code}", description=str(flightData))
-        #await ctx.respond(embed=myEmbed)
+
+@bot.event
+async def on_raw_reaction_add(payload):
+    messageSender = payload.user_id
+    if(messageSender == bot.user.id):
+        return
+    else:
+        print("someone who is not the bot reacted to the message")
+        emoji = payload.emoji
+        #get the channel this was in
+        channel = await bot.fetch_channel(payload.channel_id)
+        message = await channel.fetch_message(payload.message_id)
+        await message.reply(f"You picked {emoji}")
+        return
 
 def main():
     loadKeys("backend/credentials.txt")

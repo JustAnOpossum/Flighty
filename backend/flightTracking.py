@@ -10,8 +10,8 @@ from backend.credentials import *
 airports = {}
 
 try:
-    # Loads airport CSV file for later use
-    with open('backend/airports.csv') as airportsCSV:
+# Loads airport CSV file for later use
+    with open('backend/airports.csv', encoding="utf8") as airportsCSV:
         reader = csv.reader(airportsCSV, delimiter=',')
         for row in reader:
             # Adds time zone information and location for each IATA airport
