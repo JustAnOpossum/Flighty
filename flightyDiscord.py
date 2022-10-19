@@ -11,6 +11,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(intents=intents)
 emoteList = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
+emoteDict = {'1️⃣':1, '2️⃣':2, '3️⃣':3, '4️⃣':4, '5️⃣':5, '6️⃣':6, '7️⃣':7, '8️⃣':8, '9️⃣':9, '🔟':10}
 
 @bot.slash_command(name="track_flight")
 async def track_flight(ctx, flight_code:discord.Option(str)):
@@ -83,7 +84,11 @@ async def on_raw_reaction_add(payload):
         #get the channel this was in
         channel = await bot.fetch_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
-        await message.reply(f"You picked {emoji}")
+        #this is the emoji the user chose, just as an int.
+        emoteInt = emoteDict[emoji.name]
+        
+        print((message.embeds)[0].fields[emoteInt- 1].value)
+        await message.reply(f"You picked {emoji} {emoteDict[emoji.name]}")
         return
 
 def main():
