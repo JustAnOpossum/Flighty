@@ -23,6 +23,7 @@ Session
 CREATE TABLE `Session` (
 	`UserID` INT NOT NULL,
 	`MessageID` INT,
+	`ChannelID` INT,
 	`NumFlights` INT NOT NULL,
 	PRIMARY KEY (`UserID`)
 );
@@ -40,5 +41,8 @@ CREATE TABLE `Flight` (
 	`ArriveGate` VARCHAR NOT NULL,
 	`ArriveAPC` VARCHAR NOT NULL,
 	`DepartAPC` VARCHAR NOT NULL,
-	`Coords` VARCHAR NOT NULL
+	`Coords` VARCHAR NOT NULL,
+	`ArvTz` VARCHAR NOT NULL,
+	`DepTz` VARCHAR NOT NULL,
+	`Registration` VARCHAR NOT NULL
 );

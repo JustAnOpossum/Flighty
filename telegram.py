@@ -1,5 +1,6 @@
 from backend.credentials import *
 from backend.flightTracking import *
+from backend.database import *
 import telebot
 import zulu
 from telebot import types
@@ -95,8 +96,8 @@ def main():
                                 flight)
 
                 case 'checkForMoreFlights':
+                    # TODO: Save data to database
                     if call.data == 'no':
-                        # TODO: Save last flight to database
                         print(
                             currentFlightUsers[call.from_user.id]['pickedFlights'])
                         bot.edit_message_text(chat_id=call.message.chat.id,

@@ -1,11 +1,28 @@
 import sqlite3
 
-    ####TODO
-    # Database function that takes userID and returns ANY tuple in the database that cooresponds to the userID, maybe in a dictionary
+# TODO
+# Database function that takes userID and returns ANY tuple in the database that cooresponds to the userID, maybe in a dictionary
 
+
+# precondition: data is a tuple of 3 members. This matches the Session Database
+# postcondition: data successfully entered into Session table.
+def addSessionFlightDB(data):
+    try:
+        con = sqlite3.connect("backend/flighty.db")
+        cur = con.cursor()
+
+        cur.execute(
+            "INSERT INTO Session VALUES (?, ?, ?)", data)
+        con.commit()
+        con.close()
+    except sqlite3.Error as er:
+        print(er)
+    return
 
 # precondition: data is a tuple of 13 members. This matches the Flight Database
 # postcondition: data successfully entered into Flight table.
+
+
 def addToFlightDB(data):
     try:
         con = sqlite3.connect("backend/flighty.db")
@@ -21,6 +38,8 @@ def addToFlightDB(data):
 
 # precondition: the flighty.db file exists.
 # postcondition: returned list of tuples containing the data from the Flight db
+
+
 def queryDB(query):
     try:
         # initialize our db connection
@@ -49,6 +68,7 @@ def makeDB(fName):
             CREATE TABLE `Session` (
                 `UserID` INT NOT NULL,
                 `MessageID` INT,
+                `ChannelID` INT,
                 `NumFlights` INT NOT NULL,
                 PRIMARY KEY (`UserID`)
             );
@@ -69,7 +89,9 @@ def makeDB(fName):
                 `ArriveAPC` VARCHAR NOT NULL,
                 `DepartAPC` VARCHAR NOT NULL,
                 `Coords` VARCHAR NOT NULL,
-                `Registration` VARCHAR NOT NULL
+                `Registration` VARCHAR NOT NULL,
+                `ArvTz` VARCHAR NOT NULL,
+	            `DepTz` VARCHAR NOT NULL
             );
         """)
         # close the connection
