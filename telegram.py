@@ -17,7 +17,8 @@ def main():
     @bot.message_handler(commands=['start', 'help'])
     def send_welcome(message):
         print('start')
-        bot.send_message(message.chat.id, "*hello*", parse_mode="markdown")
+        bot.send_message(
+            message.chat.id, "Welcome to the bot, temporary welcome message. Commands are */trackFlight*", parse_mode="markdown")
 
     # Handles the track flight command
     @bot.message_handler(commands=['trackFlight'])
@@ -40,7 +41,6 @@ def main():
                     # Gets flight information from the API
                     markup = types.InlineKeyboardMarkup(row_width=2)
                     flights = getFlight(message.text)
-                    flights.reverse()
                     chatMsg = "Choose a flight:"
                     flightNum = 0
                     emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣']
