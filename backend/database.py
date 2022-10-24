@@ -1,24 +1,5 @@
 import sqlite3
 
-# TODO
-# Database function that takes userID and returns ANY tuple in the database that cooresponds to the userID, maybe in a dictionary
-
-
-# precondition: data is a tuple of 3 members. This matches the Session Database
-# postcondition: data successfully entered into Session table.
-def addSessionFlightDB(data):
-    try:
-        con = sqlite3.connect("backend/flighty.db")
-        cur = con.cursor()
-
-        cur.execute(
-            "INSERT INTO Session VALUES (?, ?, ?)", data)
-        con.commit()
-        con.close()
-    except sqlite3.Error as er:
-        print(er)
-    return
-
 # precondition: data is a tuple of 13 members. This matches the Flight Database
 # postcondition: data successfully entered into Flight table.
 
@@ -29,7 +10,7 @@ def addToFlightDB(data):
         cur = con.cursor()
 
         cur.execute(
-            "INSERT INTO Flight VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data)
+            "INSERT INTO Flight VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data)
         con.commit()
         con.close()
     except sqlite3.Error as er:
@@ -92,8 +73,10 @@ def makeDB(fName):
         print(str(er) + "Test")
     return
 
+
 def main():
     makeDB("flighty.db")
+
 
 if (__name__ == "__main__"):
     main()

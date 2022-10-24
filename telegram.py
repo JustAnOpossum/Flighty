@@ -97,6 +97,8 @@ def main():
 
                 case 'checkForMoreFlights':
                     # TODO: Save data to database
+                    for flight in currentFlightUsers[call.from_user.id]['pickedFlights']:
+                        addToFlightDB()
                     if call.data == 'no':
                         print(
                             currentFlightUsers[call.from_user.id]['pickedFlights'])
