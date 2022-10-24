@@ -5,6 +5,7 @@ from backend.credentials import *
 from backend.flightTracking import *
 from backend.credentials import *
 from backend.database import *
+from time import *
 import zulu
 
 intents = discord.Intents.default()
@@ -56,6 +57,7 @@ async def track_flight(ctx, flight_code:discord.Option(str)):
 @bot.event
 async def on_raw_reaction_add(payload):
     messageSender = payload.user_id
+    userID = messageSender
     #IF THE BOT REACTED, WE IGNORE IT
     if(messageSender == bot.user.id):
         return
@@ -86,7 +88,7 @@ async def on_raw_reaction_add(payload):
         else:
             #here we have a array of dictionaries
             flightData = flightData[emoteInt - 1]
-            print(type(flightData))
+            print(flightData)
             #information setup
             flightID = str(flightData["flightID"])
             flightDelay = str(flightData["Delay"])
@@ -99,12 +101,42 @@ async def on_raw_reaction_add(payload):
             flightArvCode = str(flightData["ArvCode"])
             flightDepCode = str(flightData["DepCode"])
             flightRegistration = str(flightData["Registration"])
+            arvTz = str(flightData["ArvTz"])
+            depTz = str(flightData["DepTz"])
 
             ArvTime = zulu.parse(flightArvTime)
             DepTime = zulu.parse(flightDepTime)
 
             formattedArrival = ArvTime.format('%b %d %Y - %I:%M %p %Z', tz=flightData['ArvTz'])
             formattedDeaprture = DepTime.format('%b %d %Y - %I:%M %p %Z', tz=flightData['DepTz'])
+
+            currentTime = strftime("%Y-%m-%d %H:%M:%S", localtime())
+            
+            data = (
+                str(userID),
+                str(channel),
+                str(message),
+                str(flightCode),
+                str(currentTime),
+                str(flightDelay),
+                str(flightDepTime),
+                str(flightArvTime),
+                str(flightDepTerm),
+                str(flightDepGate),
+                str(flightArvTerm),
+                str(flightArvGate),
+                str(flightArvCode),
+                str(flightDepCode),
+                str(arvTz),
+                str(depTz),
+                str(flightRegistration)
+            )
+
+            #insert data into database
+            try:
+                addToFlightDB(data)
+            except sqlite3.Error as er:
+                print(str(er))
 
             myEmbed = discord.Embed(title=f"Flight Tracker: {flightDepCode} ✈️ {flightArvCode}", color=0x008080)
             if(int(flightDelay) > 0):

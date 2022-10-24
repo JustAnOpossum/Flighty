@@ -10,7 +10,7 @@ def addToFlightDB(data):
         cur = con.cursor()
 
         cur.execute(
-            "INSERT INTO Flight VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data)
+            "INSERT INTO Flights VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data)
         con.commit()
         con.close()
     except sqlite3.Error as er:
