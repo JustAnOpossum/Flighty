@@ -63,40 +63,37 @@ def makeDB(fName):
         # connect to and initialize the database file
         con = sqlite3.connect(fName)
         cur = con.cursor()
-        # generate schema for Session
-        cur.execute("""
-            CREATE TABLE `Session` (
-                `UserID` INT NOT NULL,
-                `MessageID` INT,
-                `ChannelID` INT,
-                `NumFlights` INT NOT NULL,
-                PRIMARY KEY (`UserID`)
-            );
-        """)
-
         # Generate schema for Flight
         cur.execute("""
-            CREATE TABLE `Flight` (
+            CREATE TABLE `Flights` (
                 `UserID` VARCHAR NOT NULL,
-                `InternalFlightID` INT NOT NULL,
-                `Delay` INT NOT NULL,
-                `DepartureTime` VARCHAR NOT NULL,
-                `SchedArrivalTime` VARCHAR NOT NULL,
+                `ChannelID` VARCHAR NOT NULL,
+                `MessageID` VARCHAR NOT NULL,
+                `FlightCode` VARCHAR NOT NULL,
+                `LastMessageUpdate` DATETIME NOT NULL,
+                `Delay` VARCHAR NOT NULL,
+                `DepartureTime` DATETIME NOT NULL,
+                `SchedArrivalTime` DATETIME NOT NULL,
                 `DepartTerminal` VARCHAR NOT NULL,
                 `DepartGate` VARCHAR NOT NULL,
                 `ArriveTerminal` VARCHAR NOT NULL,
                 `ArriveGate` VARCHAR NOT NULL,
                 `ArriveAPC` VARCHAR NOT NULL,
                 `DepartAPC` VARCHAR NOT NULL,
-                `Coords` VARCHAR NOT NULL,
-                `Registration` VARCHAR NOT NULL,
                 `ArvTz` VARCHAR NOT NULL,
-	            `DepTz` VARCHAR NOT NULL
+                `DepTz` VARCHAR NOT NULL,
+                `Registration` VARCHAR NOT NULL
             );
         """)
         # close the connection
         con.close()
     # exception error handling
     except sqlite3.Error as er:
-        print(er)
+        print(str(er) + "Test")
     return
+
+def main():
+    makeDB("flighty.db")
+
+if (__name__ == "__main__"):
+    main()

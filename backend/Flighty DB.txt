@@ -1,12 +1,9 @@
-Session
-	- ID (PK) (user id?)
-	- Channel ID
-	/ - Message ID
-	- NumFlights
-
 Flight
-	- User ID (FK)
-	- Internal Flight ID
+	- User ID
+	- Channel ID
+	- Message ID
+	- FlightCode
+	- LastMessageUpdate
 	- Delay
 	- Departure Time
 	- Sced. Arrival Time
@@ -16,33 +13,29 @@ Flight
 	- Arrival Gate
 	- Arrival APC
 	- Dept. APC
-	- Coordinates
+	- ArrivalTz
+	- DepartureTz
+	- Registration
 
-
-Session
-CREATE TABLE `Session` (
-	`UserID` INT NOT NULL,
-	`MessageID` INT,
-	`ChannelID` INT,
-	`NumFlights` INT NOT NULL,
-	PRIMARY KEY (`UserID`)
-);
-
-Flight
-CREATE TABLE `Flight` (
+Flight Entry
+CREATE TABLE `Flights` (
 	`UserID` VARCHAR NOT NULL,
-	`InternalFlightID` INT NOT NULL,
-	`Delay` INT NOT NULL,
-	`DepartureTime` VARCHAR NOT NULL,
-	`SchedArrivalTime` VARCHAR NOT NULL,
+	`ChannelID` VARCHAR NOT NULL,
+	`MessageID` VARCHAR NOT NULL,
+	`FlightCode` VARCHAR NOT NULL,
+	`LastMessageUpdate` DATETIME NOT NULL,
+	`Delay` VARCHAR NOT NULL,
+	`DepartureTime` DATETIME NOT NULL,
+	`SchedArrivalTime` DATETIME NOT NULL,
 	`DepartTerminal` VARCHAR NOT NULL,
 	`DepartGate` VARCHAR NOT NULL,
 	`ArriveTerminal` VARCHAR NOT NULL,
 	`ArriveGate` VARCHAR NOT NULL,
 	`ArriveAPC` VARCHAR NOT NULL,
 	`DepartAPC` VARCHAR NOT NULL,
-	`Coords` VARCHAR NOT NULL,
 	`ArvTz` VARCHAR NOT NULL,
 	`DepTz` VARCHAR NOT NULL,
 	`Registration` VARCHAR NOT NULL
 );
+
+CONSIDER REMOVING LATITUDE AND LONGITUDE
