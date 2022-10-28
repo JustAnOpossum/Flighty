@@ -1,8 +1,12 @@
+from datetime import datetime
 from backend.credentials import *
 from backend.flightTracking import *
 from backend.database import *
 import telebot
 import zulu
+import threading
+from dateutil import parser
+from time import *
 from telebot import types
 from telebot.types import InlineKeyboardButton
 
@@ -41,6 +45,13 @@ def main():
                     # Gets flight information from the API
                     markup = types.InlineKeyboardMarkup(row_width=2)
                     flights = getFlight(message.text)
+
+                    # Makes sure a user inputs a correct flight number
+                    if len(flights) == 0:
+                        bot.send_message(
+                            message.chat.id, "No flights found. Please try another flight number.")
+                        return
+
                     chatMsg = "Choose a flight:"
                     flightNum = 0
                     emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣']
@@ -96,12 +107,31 @@ def main():
                                 flight)
 
                 case 'checkForMoreFlights':
-                    # TODO: Save data to database
-                    for flight in currentFlightUsers[call.from_user.id]['pickedFlights']:
-                        addToFlightDB()
                     if call.data == 'no':
-                        print(
-                            currentFlightUsers[call.from_user.id]['pickedFlights'])
+                        for flight in currentFlightUsers[call.from_user.id]['pickedFlights']:
+                            dateTime = strftime(
+                                "%Y-%m-%d %H:%M:%S", localtime())
+                            dateTimeArv = zulu.parse(flight['ArvTime']).format(
+                                '%Y-%m-%d %H:%M:%S', tz=flight['ArvTz'])
+                            dateTimeDep = zulu.parse(flight['ArvTime']).format(
+                                '%Y-%m-%d %H:%M:%S', tz=flight['DepTz'])
+                            addToFlightDB(
+                                (call.from_user.id,
+                                 call.message.chat.id,
+                                 call.message.id,
+                                 flight['flightID'],
+                                 dateTime, flight['Delay'],
+                                 dateTimeDep,
+                                 dateTimeArv,
+                                 flight['DepTerm'],
+                                 flight['DepGate'],
+                                 flight['ArvTerm'],
+                                 flight['ArvGate'],
+                                 flight['ArvCode'],
+                                 flight['DepCode'],
+                                 flight['ArvTz'],
+                                 flight['DepTz'],
+                                 flight['Registration']))
                         bot.edit_message_text(chat_id=call.message.chat.id,
                                               text='Flight screne here', message_id=call.message.id)
                         del currentFlightUsers[call.from_user.id]
@@ -111,10 +141,23 @@ def main():
                         currentFlightUsers[call.from_user.id]['mode'] = 'trackFlight'
 
     print("Bot Loaded")
+
+    # Starts timer for so that the bot can edit messages with new information
+    timer = threading.Timer(5.0, updateMsg)
+    timer.start()
+
     bot.infinity_polling()
 
+# Method to update bot messages with new flight information
 
-# def captureFlightNum():
+
+def updateMsg():
+    for user in getUsers():
+        flightMsg = getFlightMessage(user[0])
+
+    # Restarts the timer so method can be called again
+    timer = threading.Timer(5.0, updateMsg)
+    timer.start()
 
 
 if (__name__ == "__main__"):

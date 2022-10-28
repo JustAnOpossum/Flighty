@@ -55,10 +55,10 @@ def makeDB(fName):
                 `Delay` VARCHAR NOT NULL,
                 `DepartureTime` DATETIME NOT NULL,
                 `SchedArrivalTime` DATETIME NOT NULL,
-                `DepartTerminal` VARCHAR NOT NULL,
-                `DepartGate` VARCHAR NOT NULL,
-                `ArriveTerminal` VARCHAR NOT NULL,
-                `ArriveGate` VARCHAR NOT NULL,
+                `DepartTerminal` VARCHAR,
+                `DepartGate` VARCHAR,
+                `ArriveTerminal` VARCHAR,
+                `ArriveGate` VARCHAR,
                 `ArriveAPC` VARCHAR NOT NULL,
                 `DepartAPC` VARCHAR NOT NULL,
                 `ArvTz` VARCHAR NOT NULL,
@@ -73,9 +73,43 @@ def makeDB(fName):
         print(str(er) + "Test")
     return
 
+# postcondition: Returns flight messages sorted by flight departure time
+
+
+def getFlightMessage(userID):
+    try:
+        # initialize our db connection
+        con = sqlite3.connect("backend/flighty.db")
+        cur = con.cursor()
+        # execute the query
+        result = cur.execute(
+            'SELECT * FROM Flights WHERE UserID = ? ORDER BY DepartureTime', (userID,))
+        result = result.fetchone()  # result now holds our list
+        return result
+    except sqlite3.Error as er:  # error handling
+        print(er)
+        return None
+
+# postcondition: Returns all active user IDs
+
+
+def getUsers():
+    try:
+        # initialize our db connection
+        con = sqlite3.connect("backend/flighty.db")
+        cur = con.cursor()
+        # execute the query
+        result = cur.execute(
+            'SELECT DISTINCT UserID FROM Flights')
+        result = result.fetchall()  # result now holds our list
+        return result
+    except sqlite3.Error as er:  # error handling
+        print(er)
+        return None
+
 
 def main():
-    makeDB("flighty.db")
+    makeDB("backend/flighty.db")
 
 
 if (__name__ == "__main__"):
