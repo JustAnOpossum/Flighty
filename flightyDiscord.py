@@ -1,11 +1,12 @@
 from urllib import response
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from backend.credentials import *
 from backend.flightTracking import *
 from backend.credentials import *
 from backend.database import *
 from time import *
+import asyncio
 import zulu
 
 intents = discord.Intents.default()
@@ -14,7 +15,7 @@ bot = commands.Bot(intents=intents)
 emoteList = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
 emoteDict = {'1️⃣':1, '2️⃣':2, '3️⃣':3, '4️⃣':4, '5️⃣':5, '6️⃣':6, '7️⃣':7, '8️⃣':8, '9️⃣':9, '🔟':10}
 
-@bot.slash_command(name="track_flight")
+@bot.slash_command(name="track_flight", description="Enter a flight code to begin tracking your flight. Ex. /track_flight UAL1")
 async def track_flight(ctx, flight_code:discord.Option(str)):
     try:
         print("Getting flight data!")
@@ -49,8 +50,10 @@ async def track_flight(ctx, flight_code:discord.Option(str)):
 
                 myEmbed.add_field(name = f"Flight {emoteList[flight]}:", value=f"{flightDepCode} {formattedDeaprture} ✈️ {flightArvCode} {formattedArrival}", inline=False)
             
-            message = await ctx.send(embed=myEmbed)
+            message = await ctx.send(embed=myEmbed, delete_after=(60*5))
 
+            print(type(ctx))
+            
             for flight in myRange:
                 await message.add_reaction(emoteList[flight])
 
@@ -111,7 +114,8 @@ async def on_raw_reaction_add(payload):
             formattedDeaprture = DepTime.format('%b %d %Y - %I:%M %p %Z', tz=flightData['DepTz'])
 
             currentTime = strftime("%Y-%m-%d %H:%M:%S", localtime())
-            
+            #print("Current Time: " + str(currentTime))
+
             data = (
                 str(userID),
                 str(channel),
@@ -135,6 +139,7 @@ async def on_raw_reaction_add(payload):
             #insert data into database
             try:
                 addToFlightDB(data)
+                print("Successfully updated database!")
             except sqlite3.Error as er:
                 print(str(er))
 
@@ -147,12 +152,31 @@ async def on_raw_reaction_add(payload):
             myEmbed.add_field(name="Departing Gate & Terminal", value=f"Terminal: {flightDepTerm} Gate: {flightDepGate}", inline=False)
             myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {flightArvTerm} Gate: {flightArvGate}", inline=False)
         #print((message.embeds)[0].fields[emoteInt- 1].value)
-        await message.reply(embed=myEmbed)
+        myMessage = await message.reply(embed=myEmbed)
+        updateTask.start(myMessage, flightCode, flightDepTime, depTz, (emoteInt - 1))
         return
+
+@tasks.loop(seconds=5)
+async def updateTask(message, flightCode, depTime, depTz, index):
+    #message is the message object we are updating
+    #message update skeleton
+    #await message.edit(content="I UPDATED THE MESSAGE!")
+
+    #flightCode is the flightCode we have to request from the API
+
+    #departureTime is not too neccesary here computationally, but will come in handy in selecting the proper flight that a user is referring to
+    depTime = zulu.parse(depTime)
+    depTime = depTime.format('%b %d %Y - %I:%M %p %Z', tz=depTz)
+
+    currentTime = strftime("%Y-%m-%d %H:%M:%S", localtime())
+    
+    await message.edit(content=f"Current Time: {currentTime}, Departure Time: {depTime}", embed=None)
+    return
 
 def main():
     loadKeys("backend/credentials.txt")
     print("Starting Discord bot!")
+    #updateTask.start("ASDLJDGHSDJLGBHSDJLGBDLJBLDJBLSDLJGBSDLJGBSJLDBG\n\n")
     bot.run(getKey("Discord"))
 
 if (__name__ == "__main__"):
