@@ -61,6 +61,7 @@ async def track_flight(ctx, flight_code:discord.Option(str)):
 async def on_raw_reaction_add(payload):
     messageSender = payload.user_id
     userID = messageSender
+    data = []
     #IF THE BOT REACTED, WE IGNORE IT
     if(messageSender == bot.user.id):
         return
@@ -116,10 +117,10 @@ async def on_raw_reaction_add(payload):
             currentTime = strftime("%Y-%m-%d %H:%M:%S", localtime())
             #print("Current Time: " + str(currentTime))
 
-            data = (
+            data = [
                 str(userID),
                 str(channel),
-                str(message),
+                str(message.id),
                 str(flightCode),
                 str(currentTime),
                 str(flightDelay),
@@ -134,14 +135,7 @@ async def on_raw_reaction_add(payload):
                 str(arvTz),
                 str(depTz),
                 str(flightRegistration)
-            )
-
-            #insert data into database
-            try:
-                addToFlightDB(data)
-                print("Successfully updated database!")
-            except sqlite3.Error as er:
-                print(str(er))
+            ]
 
             myEmbed = discord.Embed(title=f"Flight Tracker: {flightDepCode} ✈️ {flightArvCode}", color=0x008080)
             if(int(flightDelay) > 0):
@@ -153,7 +147,34 @@ async def on_raw_reaction_add(payload):
             myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {flightArvTerm} Gate: {flightArvGate}", inline=False)
         #print((message.embeds)[0].fields[emoteInt- 1].value)
         myMessage = await message.reply(embed=myEmbed)
+        #insert data into database
+        data = (
+            data[0],
+            data[1],
+            str(myMessage.id),
+            data[3],
+            data[4],
+            data[5],
+            data[6],
+            data[7],
+            data[8],
+            data[9],
+            data[10],
+            data[11],
+            data[12],
+            data[13],
+            data[14],
+            data[15],
+            data[16]
+        )
+        try:
+            addToFlightDB(data)
+        except sqlite3.Error as er:
+            print(er)
+
+        #start the task that updates our message
         updateTask.start(myMessage, flightCode, flightDepTime, (emoteInt - 1))
+        #add the stop sign as a clickable button to signify a user would like to stop tracking a flight
         await myMessage.add_reaction('🛑')
         return
 
@@ -164,6 +185,8 @@ async def updateTask(message, flightCode, depTime, index):
     #departureTime is not too neccesary here computationally, but will come in handy in selecting the proper flight that a user is referring to
 
     currentTime = strftime("%Y-%m-%d %H:%M:%S", localtime())
+    currentDate = strftime("%m-%d%Y", localtime())
+    print(f"Current Time: {currentTime}\nCurrentDate: {currentDate}")
 
     #get updated flight datam
     try:
@@ -214,6 +237,19 @@ async def updateTask(message, flightCode, depTime, index):
         myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {flightArvTerm} Gate: {flightArvGate}", inline=False)
 
         myEmbed.add_field(name="Last Update: ", value=f"{str(currentTime)}", inline=False)
+
+        locationData = getFlightLocation(flightRegistration)
+        print(type(locationData))
+        print(str(locationData))
+        latitude = None
+        longitude = None
+        if(not locationData == {} or not locationData == None):
+            latitude = locationData["lat"]
+            longitude = locationData["lon"]
+            myEmbed.add_field(name="Position", value=f"Latitude: {latitude} Longitude: {longitude}", inline=False)
+
+        myEmbed.set_image(url="https://media.discordapp.net/attachments/1030302565004488834/1037163252490186864/unnamed.png")
+
     #update the message
     await message.edit(embed=myEmbed)
     return
