@@ -6,9 +6,13 @@ import telebot
 import zulu
 import threading
 from dateutil import parser
+from datetime import *
+import pytz
+from pytz import timezone
 from time import *
 from telebot import types
 from telebot.types import InlineKeyboardButton
+import geopy.distance
 
 
 def main():
@@ -112,9 +116,9 @@ def main():
                             dateTime = strftime(
                                 "%Y-%m-%d %H:%M:%S", localtime())
                             dateTimeArv = zulu.parse(flight['ArvTime']).format(
-                                '%Y-%m-%d %H:%M:%S', tz=flight['ArvTz'])
+                                '%Y-%m-%d %H:%M:%S')
                             dateTimeDep = zulu.parse(flight['ArvTime']).format(
-                                '%Y-%m-%d %H:%M:%S', tz=flight['DepTz'])
+                                '%Y-%m-%d %H:%M:%S')
                             addToFlightDB(
                                 (call.from_user.id,
                                  call.message.chat.id,
@@ -152,13 +156,52 @@ def main():
 
 
 def updateMsg():
+    loadKeys("backend/credentials.txt")
+    bot = telebot.TeleBot(getKey("Telegram"))
     for user in getUsers():
+        utc = pytz.UTC
         flightMsg = getFlightMessage(user[0])
-
+        # Makes sure time zone is UTC for later use
+        depTime = utc.localize(parser.parse(flightMsg[6]))
+        timeNow = utc.localize(datetime.now())
+        # Case for if flight has taken off
+        if timeNow < depTime:
+            aircraftLocation = getFlightLocation(flightMsg[16])
+            if len(aircraftLocation) == 0:
+                continue
+            # Gets the coords of the airports
+            arvAirportCoords = airports[flightMsg[12]]['location']
+            depAirportCoords = airports[flightMsg[13]]['location']
+            planeCoords = (aircraftLocation['lat'], aircraftLocation['lon'])
+            # Calculates how many miles left the plane has to go
+            milesLeft = geopy.distance.geodesic(arvAirportCoords, planeCoords)
+            # Calculates the total distance from airport to airport
+            totalDistance = geopy.distance.geodesic(
+                arvAirportCoords, depAirportCoords)
+            # Calculates the percent finished the flight has
+            percentFinished = ((totalDistance - milesLeft)/totalDistance) * 100
+            percentStr = ""
+            # match percentFinished:
+            #     case
+            msgTxt = "*Flight:* %s (%s->%s)\n\n*Flight Progress:* %s (%s)\n*Miles Left:* %s\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:* Terminal *%s* Gate *%s*\n*Arrival Info:* Terminal *%s* Gate *%s*\n" % ()
+        # Case if flight is waiting to take off
+        else:
+            depString = zulu.parse(flightMsg[6]).format(
+                '%b %d %Y - %I:%M %p %Z', tz=flightMsg[15])
+            arvString = zulu.parse(flightMsg[7]).format(
+                '%b %d %Y - %I:%M %p %Z', tz=flightMsg[14])
+            flightLeavesTime = (utc.localize(
+                datetime.now()) - zulu.parse(flightMsg[7])).total_seconds()
+            flightLeavesStr = "*%d* Hours *%d* Minutes" % (
+                int(divmod(flightLeavesTime, 3600)[0]), int(divmod(flightLeavesTime, 60)[0]))
+            msgTxt = "*Flight:* %s (%s->%s)\n\n*Time until Departure:* %s\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:* Terminal *%s* Gate *%s*\n*Arrival Info:* Terminal *%s* Gate *%s*\n" % (
+                flightMsg[3], flightMsg[13], flightMsg[12], flightLeavesStr, depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11])
+            bot.edit_message_text(
+                chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown")
     # Restarts the timer so method can be called again
     timer = threading.Timer(5.0, updateMsg)
     timer.start()
 
 
 if (__name__ == "__main__"):
-    main()
+    updateMsg()

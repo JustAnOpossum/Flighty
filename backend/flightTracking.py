@@ -10,7 +10,7 @@ from backend.credentials import *
 airports = {}
 
 try:
-# Loads airport CSV file for later use
+    # Loads airport CSV file for later use
     with open('backend/airports.csv', encoding="utf8") as airportsCSV:
         reader = csv.reader(airportsCSV, delimiter=',')
         for row in reader:
@@ -18,7 +18,7 @@ try:
             newLocation = row[5].replace("POINT (", "")
             newLocation = newLocation.replace(")", "")
             split = newLocation.split(" ")
-            newLocation = "%s, %s" % (split[1], split[0])
+            newLocation = (split[1], split[0])
             airports[row[0]] = {'tz': row[1], 'location': newLocation}
 except:
     print('Error opening CSV file.')
@@ -45,7 +45,7 @@ def getFlight(flightID):
             # Checks to make sure the flight isn't in the past
             # FIXME if you want to show a past flight for debug / visual purposes, negate the statement below
             # if not flight['actual_in'] == "None":
-            #THIS IS AN ARRAY OF DICTIONARIES
+            # THIS IS AN ARRAY OF DICTIONARIES
             if flight['actual_in'] == None:
                 flights.append({
                     'flightID': flight['ident'],
@@ -104,11 +104,13 @@ def getFlightLocation(registration):
     resposeJSON = response.json()
 
     if response.status_code == 200:
-        return {
-            'lat': resposeJSON['ac'][0]['lat'],
-            'lon': resposeJSON['ac'][0]['lon'],
-            'heading': resposeJSON['ac'][0]['nav_heading']
-        }
+        if len(resposeJSON['ac']) != 0:
+            return {
+                'lat': resposeJSON['ac'][0]['lat'],
+                'lon': resposeJSON['ac'][0]['lon'],
+            }
+        else:
+            return {}
     else:
         print("Error getting flight location")
         return {}
