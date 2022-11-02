@@ -153,30 +153,74 @@ async def on_raw_reaction_add(payload):
             myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {flightArvTerm} Gate: {flightArvGate}", inline=False)
         #print((message.embeds)[0].fields[emoteInt- 1].value)
         myMessage = await message.reply(embed=myEmbed)
-        updateTask.start(myMessage, flightCode, flightDepTime, depTz, (emoteInt - 1))
+        updateTask.start(myMessage, flightCode, flightDepTime, (emoteInt - 1))
+        await myMessage.add_reaction('🛑')
         return
 
-@tasks.loop(seconds=5)
-async def updateTask(message, flightCode, depTime, depTz, index):
+@tasks.loop(minutes=5)
+async def updateTask(message, flightCode, depTime, index):
     #message is the message object we are updating
-    #message update skeleton
-    #await message.edit(content="I UPDATED THE MESSAGE!")
-
     #flightCode is the flightCode we have to request from the API
-
     #departureTime is not too neccesary here computationally, but will come in handy in selecting the proper flight that a user is referring to
-    depTime = zulu.parse(depTime)
-    depTime = depTime.format('%b %d %Y - %I:%M %p %Z', tz=depTz)
 
     currentTime = strftime("%Y-%m-%d %H:%M:%S", localtime())
+
+    #get updated flight datam
+    try:
+        print("Getting flight data!")
+        flightData = getFlight(flightCode)
+    except flightData as er:
+        print(er)
     
-    await message.edit(content=f"Current Time: {currentTime}, Departure Time: {depTime}", embed=None)
+    #error check flightData to see we got it correctly
+    if(flightData == [] or flightData == None):
+            #if the flight response is shit. this should, in theory, never be called. but i am afraid and have anxiety.
+            myEmbed = discord.Embed(title="Flight Tracker", description="There was an error fetching that flight. Please try again.", color=0xFF0000)
+    else:
+        #here we have a array of dictionaries
+        #dereference to the proper flight info
+        flightData = flightData[index]
+        print(flightData)
+        #information setup
+        flightID = str(flightData["flightID"])
+        flightDelay = str(flightData["Delay"])
+        flightDepTime = str(flightData["DepTime"])
+        flightArvTime = str(flightData["ArvTime"])
+        flightDepTerm = str(flightData["DepTerm"])
+        flightDepGate = str(flightData["DepGate"])
+        flightArvTerm = str(flightData["ArvTerm"])
+        flightArvGate = str(flightData["ArvGate"])
+        flightArvCode = str(flightData["ArvCode"])
+        flightDepCode = str(flightData["DepCode"])
+        flightRegistration = str(flightData["Registration"])
+        arvTz = str(flightData["ArvTz"])
+        depTz = str(flightData["DepTz"])
+
+        #time processing
+        ArvTime = zulu.parse(flightArvTime)
+        DepTime = zulu.parse(flightDepTime)
+
+        formattedArrival = ArvTime.format('%b %d %Y - %I:%M %p %Z', tz=flightData['ArvTz'])
+        formattedDeaprture = DepTime.format('%b %d %Y - %I:%M %p %Z', tz=flightData['DepTz'])
+
+        #Begin Embed Construction
+        myEmbed = discord.Embed(title=f"Flight Tracker: {flightDepCode} ✈️ {flightArvCode}", color=0x008080)
+        if(int(flightDelay) > 0):
+            myEmbed.add_field(name= "Delay", value=f"{flightDelay} minute(s).", inline = False)
+            
+        myEmbed.add_field(name="Departure & Arrival", value = f"{formattedDeaprture} -> {formattedArrival}", inline=False)
+
+        myEmbed.add_field(name="Departing Gate & Terminal", value=f"Terminal: {flightDepTerm} Gate: {flightDepGate}", inline=False)
+        myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {flightArvTerm} Gate: {flightArvGate}", inline=False)
+
+        myEmbed.add_field(name="Last Update: ", value=f"{str(currentTime)}", inline=False)
+    #update the message
+    await message.edit(embed=myEmbed)
     return
 
 def main():
     loadKeys("backend/credentials.txt")
     print("Starting Discord bot!")
-    #updateTask.start("ASDLJDGHSDJLGBHSDJLGBDLJBLDJBLSDLJGBSDLJGBSJLDBG\n\n")
     bot.run(getKey("Discord"))
 
 if (__name__ == "__main__"):
