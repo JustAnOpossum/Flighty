@@ -119,10 +119,12 @@ def main():
                                 '%Y-%m-%d %H:%M:%S')
                             dateTimeDep = zulu.parse(flight['DepTime']).format(
                                 '%Y-%m-%d %H:%M:%S')
+                            newMsg = bot.send_photo(chat_id=call.message.chat.id, caption="Loading your flight...",
+                                                    photo='https://cdn.iconscout.com/icon/free/png-256/aeroplane-airplane-plane-air-transportation-vehicle-pessanger-people-emoj-symbol-30708.png')
                             addToFlightDB(
                                 (call.from_user.id,
                                  call.message.chat.id,
-                                 call.message.id,
+                                 newMsg.id,
                                  flight['flightID'],
                                  dateTime, flight['Delay'],
                                  dateTimeDep,
@@ -170,6 +172,7 @@ def main():
                     call.message.id, call.from_user.id)
                 # Checks to see if there are any flights left
                 if len(flights) == 0:
+                    # TODO: Fix message image, (map)
                     bot.edit_message_text(
                         chat_id=call.message.chat.id, text='No Flights Left', message_id=call.message.id)
                 updateMsg(False)
@@ -251,12 +254,14 @@ def updateMsg(firstMsg):
                         percentStr = percentStr + '✈️'
                     else:
                         percentStr = percentStr + '-'
-                msgTxt = "*Flight:* %s (%s->%s)\n\n*Flight Progress:* %s (%d)\n*Miles Left:* %d\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:* Terminal *%s* Gate *%s*\n*Arrival Info:* Terminal *%s* Gate *%s*\n" % (
+                msgTxt = "*Flight:* %s (%s🛫%s)\n\n*Flight Progress:* %s (%d Percent)\n*Miles Left:* %d\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:*\nTerminal *%s*\nGate *%s*\n*Arrival Info:*\nTerminal *%s*\nGate *%s*\n" % (
                     flightMsg[3], flightMsg[13], flightMsg[12], percentStr, int(
                         percentFinished*100), int(milesLeft), depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11]
                 )
-                bot.edit_message_text(
-                    chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown", reply_markup=markup)
+                # bot.edit_message_text(
+                #     chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown", reply_markup=markup)
+                editPhotoMessage(
+                    flightMsg[2], flightMsg[1], 'https://greyopossum.net/img/full/RedPandaIcon.png', markup, bot, msgTxt)
             # Case if flight is waiting to take off
             else:
                 depString = zulu.parse(flightMsg[6]).format(
@@ -269,10 +274,12 @@ def updateMsg(firstMsg):
                 minutesLeft = divmod(hoursLeft[1], 60)
                 flightLeavesStr = "*%d* Hours *%d* Minutes" % (
                     int(hoursLeft[0]), int(minutesLeft[0]))
-                msgTxt = "*Flight:* %s (%s->%s)\n\n*Time until Departure:* %s\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:* Terminal *%s* Gate *%s*\n*Arrival Info:* Terminal *%s* Gate *%s*\n" % (
+                msgTxt = "*Flight:* %s (%s->%s)\n\n*Time until Departure:* %s\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:*\nTerminal *%s*\nGate *%s*\n*Arrival Info:*\nTerminal *%s*\nGate *%s*\n" % (
                     flightMsg[3], flightMsg[13], flightMsg[12], flightLeavesStr, depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11])
-                bot.edit_message_text(
-                    chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown", reply_markup=markup)
+                # bot.edit_message_text(
+                #    chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown", reply_markup=markup)
+                editPhotoMessage(
+                    flightMsg[2], flightMsg[1], 'https://greyopossum.net/img/full/RedPandaIcon.png', markup, bot, msgTxt)
     # Restarts the timer so method can be called again
     if firstMsg:
         timer = threading.Timer(5.0, updateMsg, args=(True,))
@@ -290,6 +297,15 @@ def getSelectedFlight(msgID, userID):
         selectedFlight[userID] = {'selectedFlight': flight[3]}
     # Code for handaling the button presses in the flight tracking
     return selectedFlight[userID]['selectedFlight']
+
+
+def editPhotoMessage(msgID, chatID, newPhotoURL, inlineKeyboard, bot, text):
+    photoToSend = types.InputMediaPhoto(
+        newPhotoURL)
+    bot.edit_message_media(chat_id=chatID,
+                           message_id=msgID, media=photoToSend)
+    bot.edit_message_caption(chat_id=chatID,
+                             message_id=msgID, caption=text, parse_mode="markdown", reply_markup=inlineKeyboard)
 
 
 if (__name__ == "__main__"):
