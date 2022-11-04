@@ -8,7 +8,6 @@ import threading
 from dateutil import parser
 from datetime import *
 import pytz
-from pytz import timezone
 from time import *
 from telebot import types
 from telebot.types import InlineKeyboardButton
@@ -49,6 +48,7 @@ def main():
                     # Gets flight information from the API
                     markup = types.InlineKeyboardMarkup(row_width=2)
                     flights = getFlight(message.text)
+                    flights.reverse()
 
                     # Makes sure a user inputs a correct flight number
                     if len(flights) == 0:
@@ -69,7 +69,7 @@ def main():
                         if emojiCnt == 5:
                             break
                         flightBtn = InlineKeyboardButton(
-                            emojis[flightNum], callback_data=flight['Registration'])
+                            emojis[flightNum], callback_data=str(emojiCnt))
                         markup.add(flightBtn)
                         ArvTime = zulu.parse(flight['ArvTime'])
                         DepTime = zulu.parse(flight['DepTime'])
@@ -105,10 +105,8 @@ def main():
                                           text='Do you want to track any more flights?', message_id=call.message.id, reply_markup=markup)
                     currentFlightUsers[call.from_user.id]['mode'] = 'checkForMoreFlights'
                     # Adds their current flight to picked flights for later use
-                    for flight in currentFlightUsers[call.from_user.id]['flightList']:
-                        if flight['Registration'] == call.data:
-                            currentFlightUsers[call.from_user.id]['pickedFlights'].append(
-                                flight)
+                    currentFlightUsers[call.from_user.id]['pickedFlights'].append(
+                        currentFlightUsers[call.from_user.id]['flightList'][int(call.data)])
 
                 case 'checkForMoreFlights':
                     if call.data == 'no':
@@ -136,8 +134,7 @@ def main():
                                  flight['ArvTz'],
                                  flight['DepTz'],
                                  flight['Registration']))
-                        bot.edit_message_text(chat_id=call.message.chat.id,
-                                              text='Flight screne here', message_id=call.message.id)
+                        updateMsg(False)
                         del currentFlightUsers[call.from_user.id]
                     else:
                         bot.edit_message_text(
@@ -147,7 +144,7 @@ def main():
     print("Bot Loaded")
 
     # Starts timer for so that the bot can edit messages with new information
-    timer = threading.Timer(5.0, updateMsg)
+    timer = threading.Timer(5.0, updateMsg, args=(True,))
     timer.start()
 
     bot.infinity_polling()
@@ -155,7 +152,7 @@ def main():
 # Method to update bot messages with new flight information
 
 
-def updateMsg():
+def updateMsg(firstMsg):
     loadKeys("backend/credentials.txt")
     bot = telebot.TeleBot(getKey("Telegram"))
     for user in getUsers():
@@ -165,7 +162,7 @@ def updateMsg():
         depTime = utc.localize(parser.parse(flightMsg[6]))
         timeNow = utc.localize(datetime.now())
         # Case for if flight has taken off
-        if timeNow < depTime:
+        if timeNow > depTime:
             aircraftLocation = getFlightLocation(flightMsg[16])
             if len(aircraftLocation) == 0:
                 continue
@@ -174,16 +171,29 @@ def updateMsg():
             depAirportCoords = airports[flightMsg[13]]['location']
             planeCoords = (aircraftLocation['lat'], aircraftLocation['lon'])
             # Calculates how many miles left the plane has to go
-            milesLeft = geopy.distance.geodesic(arvAirportCoords, planeCoords)
+            milesLeft = geopy.distance.great_circle(
+                arvAirportCoords, planeCoords).miles
             # Calculates the total distance from airport to airport
-            totalDistance = geopy.distance.geodesic(
-                arvAirportCoords, depAirportCoords)
+            totalDistance = geopy.distance.great_circle(
+                arvAirportCoords, depAirportCoords).miles
             # Calculates the percent finished the flight has
-            percentFinished = ((totalDistance - milesLeft)/totalDistance) * 100
+            percentFinished = ((totalDistance - milesLeft)/totalDistance)
             percentStr = ""
-            # match percentFinished:
-            #     case
-            msgTxt = "*Flight:* %s (%s->%s)\n\n*Flight Progress:* %s (%s)\n*Miles Left:* %s\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:* Terminal *%s* Gate *%s*\n*Arrival Info:* Terminal *%s* Gate *%s*\n" % ()
+            depString = zulu.parse(flightMsg[6]).format(
+                '%b %d %Y - %I:%M %p %Z', tz=flightMsg[15])
+            arvString = zulu.parse(flightMsg[7]).format(
+                '%b %d %Y - %I:%M %p %Z', tz=flightMsg[14])
+            for i in range(0, 10):
+                if int(percentFinished * 10) == i:
+                    percentStr = percentStr + '✈️'
+                else:
+                    percentStr = percentStr + '-'
+            msgTxt = "*Flight:* %s (%s->%s)\n\n*Flight Progress:* %s (%d%)\n*Miles Left:* %d\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:* Terminal *%s* Gate *%s*\n*Arrival Info:* Terminal *%s* Gate *%s*\n" % (
+                flightMsg[3], flightMsg[13], flightMsg[12], percentStr, int(
+                    percentFinished*100), int(milesLeft), depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11]
+            )
+            bot.edit_message_text(
+                chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown")
         # Case if flight is waiting to take off
         else:
             depString = zulu.parse(flightMsg[6]).format(
@@ -199,9 +209,11 @@ def updateMsg():
             bot.edit_message_text(
                 chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown")
     # Restarts the timer so method can be called again
-    timer = threading.Timer(5.0, updateMsg)
-    timer.start()
+    if firstMsg:
+        timer = threading.Timer(5.0, updateMsg, args=(True,))
+        timer.start()
 
 
 if (__name__ == "__main__"):
-    updateMsg()
+    # updateMsg(False)
+    main()
