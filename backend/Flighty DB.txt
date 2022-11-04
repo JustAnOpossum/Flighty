@@ -1,21 +1,24 @@
 Flight
-	- User ID
-	- Channel ID
-	- Message ID
-	- FlightCode
-	- LastMessageUpdate
-	- Delay
-	- Departure Time
-	- Sced. Arrival Time
-	- Dept. Terminal
-	- Dept. Gate
-	- Arrival Terminal
-	- Arrival Gate
-	- Arrival APC
-	- Dept. APC
-	- ArrivalTz
-	- DepartureTz
-	- Registration
+	0 - User ID
+	1 - Channel ID
+	2 - Message ID
+	3 - FlightCode
+	4 - LastMessageUpdate
+	5 - Delay
+	6 - Departure Time
+	7 - Sced. Arrival Time
+	8 - Dept. Terminal
+	9 - Dept. Gate
+	10 - Arrival Terminal
+	11 - Arrival Gate
+	12 - Arrival APC
+	13 - Dept. APC
+	14 - ArrivalTz
+	15 - DepartureTz
+	16 - Registration
+	17 - Platform
+	18 - Departed
+	19 - Landed
 
 Flight Entry
 CREATE TABLE `Flights` (
@@ -35,7 +38,10 @@ CREATE TABLE `Flights` (
 	`DepartAPC` VARCHAR NOT NULL,
 	`ArvTz` VARCHAR NOT NULL,
 	`DepTz` VARCHAR NOT NULL,
-	`Registration` VARCHAR NOT NULL
+	`Registration` VARCHAR NOT NULL,
+	`Platform` VARCHAR NOT NULL,
+	`Departed` VARCHAT NOT NULL,
+	`Landed` VARCHAR NOT NULL
 );
 
 CONSIDER REMOVING LATITUDE AND LONGITUDE

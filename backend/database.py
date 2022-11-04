@@ -10,7 +10,7 @@ def addToFlightDB(data):
         cur = con.cursor()
 
         cur.execute(
-            "INSERT INTO Flights VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data)
+            "INSERT INTO Flights VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data)
         con.commit()
         con.close()
     except sqlite3.Error as er:
@@ -63,7 +63,10 @@ def makeDB(fName):
                 `DepartAPC` VARCHAR NOT NULL,
                 `ArvTz` VARCHAR NOT NULL,
                 `DepTz` VARCHAR NOT NULL,
-                `Registration` VARCHAR NOT NULL
+                `Registration` VARCHAR NOT NULL,
+                `Platform` VARCHAR NOT NULL,
+                `Departed` VARCHAT NOT NULL,
+                `Landed` VARCHAR NOT NULL
             );
         """)
         # close the connection
@@ -84,11 +87,38 @@ def getFlightMessage(userID):
         # execute the query
         result = cur.execute(
             'SELECT * FROM Flights WHERE UserID = ? ORDER BY DepartureTime', (userID,))
-        result = result.fetchone()  # result now holds our list
+        result = result.fetchall()  # result now holds our list
         return result
     except sqlite3.Error as er:  # error handling
         print(er)
         return None
+
+# postcondition: Returns flight messages sorted by flight departure time using user ID and message ID to filter the results
+
+
+def getFlightMessageWithMessage(msgID, UserID):
+    try:
+        # initialize our db connection
+        con = sqlite3.connect("backend/flighty.db")
+        cur = con.cursor()
+        # execute the query
+        result = cur.execute(
+            'SELECT * FROM Flights WHERE MessageID = ? AND UserID = ? ORDER BY DepartureTime', (msgID, UserID))
+        result = result.fetchall()  # result now holds our list
+        return result
+    except sqlite3.Error as er:  # error handling
+        print(er)
+        return None
+
+# postcondition: Deletes a flight from the database, called when the user wants to stop tracking a flight and delete it
+
+
+def deleteFlight(flightID, msgID, userID):
+    # initialize our db connection
+    con = sqlite3.connect("backend/flighty.db")
+    cur = con.cursor()
+    result = cur.execute(
+        'DELETE FROM Flights WHERE MessageID = ? AND UserID = ? AND FlightCode = ?', (msgID, userID, flightID))
 
 # postcondition: Returns all active user IDs
 

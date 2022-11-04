@@ -132,3 +132,4 @@ flighty/*
 credentials.txt
 backend/credentials.txt
 .vscode
+backend/flighty.db

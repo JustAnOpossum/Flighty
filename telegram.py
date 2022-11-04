@@ -13,6 +13,8 @@ from telebot import types
 from telebot.types import InlineKeyboardButton
 import geopy.distance
 
+selectedFlight = {}
+
 
 def main():
     currentFlightUsers = {}
@@ -92,7 +94,7 @@ def main():
 
     # Handler for callback buttons
     @bot.callback_query_handler(func=lambda call: True)
-    def test_callback(call):
+    def btnCallback(call):
         if call.from_user.id in currentFlightUsers:
             match currentFlightUsers[call.from_user.id]['mode']:
                 # Callback when a user chooses a flight from the search results
@@ -115,7 +117,7 @@ def main():
                                 "%Y-%m-%d %H:%M:%S", localtime())
                             dateTimeArv = zulu.parse(flight['ArvTime']).format(
                                 '%Y-%m-%d %H:%M:%S')
-                            dateTimeDep = zulu.parse(flight['ArvTime']).format(
+                            dateTimeDep = zulu.parse(flight['DepTime']).format(
                                 '%Y-%m-%d %H:%M:%S')
                             addToFlightDB(
                                 (call.from_user.id,
@@ -133,19 +135,50 @@ def main():
                                  flight['DepCode'],
                                  flight['ArvTz'],
                                  flight['DepTz'],
-                                 flight['Registration']))
+                                 flight['Registration'],
+                                 'Telegram',
+                                 'No',
+                                 'No'))
                         updateMsg(False)
                         del currentFlightUsers[call.from_user.id]
                     else:
                         bot.edit_message_text(
                             chat_id=call.message.chat.id, text='Please send me your flight number, ex: UA123', message_id=call.message.id)
                         currentFlightUsers[call.from_user.id]['mode'] = 'trackFlight'
-
+                        # Case for user using the buttons on the flight tracking
+        if ':' not in call.data:
+            return
+        params = call.data.split(':')
+        currentFlight = getSelectedFlight(
+            call.message.id, call.from_user.id)
+        # Checks for what each button press could be
+        match params[1]:
+            # Button is pressed to go to the next flight
+            case 'c':
+                if params[0] != 'N/A':
+                    selectedFlight[call.from_user.id]['selectedFlight'] = params[0]
+                    updateMsg(False)
+            # Button is pressed to refresh
+            case 'r':
+                updateMsg(False)
+            # Button is pressed to stop tracking flight
+            case 's':
+                deleteFlight(params[0], call.message.id, call.from_user.id)
+                del selectedFlight[call.from_user.id]
+                flights = getFlightMessageWithMessage(
+                    call.message.id, call.from_user.id)
+                # Checks to see if there are any flights left
+                if len(flights) == 0:
+                    bot.edit_message_text(
+                        chat_id=call.message.chat.id, text='No Flights Left', message_id=call.message.id)
+                # Resets the selected flight information
+                del selectedFlight[call.from_user.id]
+                updateMsg(False)
     print("Bot Loaded")
 
     # Starts timer for so that the bot can edit messages with new information
-    timer = threading.Timer(5.0, updateMsg, args=(True,))
-    timer.start()
+    # timer = threading.Timer(5.0, updateMsg, args=(True,))
+    # timer.start()
 
     bot.infinity_polling()
 
@@ -157,61 +190,107 @@ def updateMsg(firstMsg):
     bot = telebot.TeleBot(getKey("Telegram"))
     for user in getUsers():
         utc = pytz.UTC
-        flightMsg = getFlightMessage(user[0])
-        # Makes sure time zone is UTC for later use
-        depTime = utc.localize(parser.parse(flightMsg[6]))
-        timeNow = utc.localize(datetime.now())
-        # Case for if flight has taken off
-        if timeNow > depTime:
-            aircraftLocation = getFlightLocation(flightMsg[16])
-            if len(aircraftLocation) == 0:
+        flightMsgs = getFlightMessage(user[0])
+        count = 0
+        # Loops though all flights for a user
+        for flightMsg in flightMsgs:
+            selectedFlightMsg = getSelectedFlight(
+                flightMsg[2], flightMsg[0])
+            # Finds the current selected message, so that it is the only one that is updated
+            if selectedFlightMsg not in flightMsg[3]:
                 continue
-            # Gets the coords of the airports
-            arvAirportCoords = airports[flightMsg[12]]['location']
-            depAirportCoords = airports[flightMsg[13]]['location']
-            planeCoords = (aircraftLocation['lat'], aircraftLocation['lon'])
-            # Calculates how many miles left the plane has to go
-            milesLeft = geopy.distance.great_circle(
-                arvAirportCoords, planeCoords).miles
-            # Calculates the total distance from airport to airport
-            totalDistance = geopy.distance.great_circle(
-                arvAirportCoords, depAirportCoords).miles
-            # Calculates the percent finished the flight has
-            percentFinished = ((totalDistance - milesLeft)/totalDistance)
-            percentStr = ""
-            depString = zulu.parse(flightMsg[6]).format(
-                '%b %d %Y - %I:%M %p %Z', tz=flightMsg[15])
-            arvString = zulu.parse(flightMsg[7]).format(
-                '%b %d %Y - %I:%M %p %Z', tz=flightMsg[14])
-            for i in range(0, 10):
-                if int(percentFinished * 10) == i:
-                    percentStr = percentStr + '✈️'
-                else:
-                    percentStr = percentStr + '-'
-            msgTxt = "*Flight:* %s (%s->%s)\n\n*Flight Progress:* %s (%d%)\n*Miles Left:* %d\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:* Terminal *%s* Gate *%s*\n*Arrival Info:* Terminal *%s* Gate *%s*\n" % (
-                flightMsg[3], flightMsg[13], flightMsg[12], percentStr, int(
-                    percentFinished*100), int(milesLeft), depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11]
-            )
-            bot.edit_message_text(
-                chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown")
-        # Case if flight is waiting to take off
-        else:
-            depString = zulu.parse(flightMsg[6]).format(
-                '%b %d %Y - %I:%M %p %Z', tz=flightMsg[15])
-            arvString = zulu.parse(flightMsg[7]).format(
-                '%b %d %Y - %I:%M %p %Z', tz=flightMsg[14])
-            flightLeavesTime = (utc.localize(
-                datetime.now()) - zulu.parse(flightMsg[7])).total_seconds()
-            flightLeavesStr = "*%d* Hours *%d* Minutes" % (
-                int(divmod(flightLeavesTime, 3600)[0]), int(divmod(flightLeavesTime, 60)[0]))
-            msgTxt = "*Flight:* %s (%s->%s)\n\n*Time until Departure:* %s\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:* Terminal *%s* Gate *%s*\n*Arrival Info:* Terminal *%s* Gate *%s*\n" % (
-                flightMsg[3], flightMsg[13], flightMsg[12], flightLeavesStr, depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11])
-            bot.edit_message_text(
-                chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown")
+
+            nextFlight = ''
+            prevFlight = ''
+            if len(flightMsgs) != count+1 and flightMsgs[count+1][2] == flightMsg[2]:
+                nextFlight = flightMsgs[count+1][3]
+            else:
+                nextFlight = 'N/A'
+            if count-1 >= 0 and flightMsgs[count-1][2] == flightMsg[2]:
+                prevFlight = flightMsgs[count-1][3]
+            else:
+                prevFlight = 'N/A'
+
+            # Creates the markup buttons for the interaction with the flight tracking
+            markup = types.InlineKeyboardMarkup(
+                row_width=2)
+            forwardBtn = InlineKeyboardButton(
+                "Forward", callback_data='%s:%s' % (nextFlight, 'c'))
+            backwardBtn = InlineKeyboardButton(
+                "Backward", callback_data='%s:%s' % (prevFlight, 'c'))
+            stopBtn = InlineKeyboardButton(
+                "Stop", callback_data='%s:%s' % (flightMsg[3], 's'))
+            refreshBtn = InlineKeyboardButton(
+                "Refresh", callback_data='%s:%s' % (flightMsg[3], 'r'))
+            markup.add(forwardBtn, backwardBtn, stopBtn, refreshBtn)
+            # Case for if flight has departed
+            if flightMsg[18] == "Yes":
+                aircraftLocation = getFlightLocation(flightMsg[16])
+                if len(aircraftLocation) == 0:
+                    continue
+                # Gets the coords of the airports
+                arvAirportCoords = airports[flightMsg[12]]['location']
+                depAirportCoords = airports[flightMsg[13]]['location']
+                planeCoords = (
+                    aircraftLocation['lat'], aircraftLocation['lon'])
+                # Calculates how many miles left the plane has to go
+                milesLeft = geopy.distance.great_circle(
+                    arvAirportCoords, planeCoords).miles
+                # Calculates the total distance from airport to airport
+                totalDistance = geopy.distance.great_circle(
+                    arvAirportCoords, depAirportCoords).miles
+                # Calculates the percent finished the flight has
+                percentFinished = ((totalDistance - milesLeft)/totalDistance)
+                percentStr = ""
+                depString = zulu.parse(flightMsg[6]).format(
+                    '%b %d %Y - %I:%M %p %Z', tz=flightMsg[15])
+                arvString = zulu.parse(flightMsg[7]).format(
+                    '%b %d %Y - %I:%M %p %Z', tz=flightMsg[14])
+                for i in range(0, 10):
+                    if int(percentFinished * 10) == i:
+                        percentStr = percentStr + '✈️'
+                    else:
+                        percentStr = percentStr + '-'
+                msgTxt = "*Flight:* %s (%s->%s)\n\n*Flight Progress:* %s (%d)\n*Miles Left:* %d\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:* Terminal *%s* Gate *%s*\n*Arrival Info:* Terminal *%s* Gate *%s*\n" % (
+                    flightMsg[3], flightMsg[13], flightMsg[12], percentStr, int(
+                        percentFinished*100), int(milesLeft), depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11]
+                )
+                bot.edit_message_text(
+                    chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown", reply_markup=markup)
+            # Case if flight is waiting to take off
+            else:
+                depString = zulu.parse(flightMsg[6]).format(
+                    '%b %d %Y - %I:%M %p %Z', tz=flightMsg[15])
+                arvString = zulu.parse(flightMsg[7]).format(
+                    '%b %d %Y - %I:%M %p %Z', tz=flightMsg[14])
+                flightLeavesTime = (zulu.parse(flightMsg[7]) - utc.localize(
+                    datetime.now())).total_seconds()
+                hoursLeft = divmod(flightLeavesTime, 3600)
+                minutesLeft = divmod(hoursLeft[1], 60)
+                flightLeavesStr = "*%d* Hours *%d* Minutes" % (
+                    int(hoursLeft[0]), int(minutesLeft[0]))
+                msgTxt = "*Flight:* %s (%s->%s)\n\n*Time until Departure:* %s\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:* Terminal *%s* Gate *%s*\n*Arrival Info:* Terminal *%s* Gate *%s*\n" % (
+                    flightMsg[3], flightMsg[13], flightMsg[12], flightLeavesStr, depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11])
+                bot.edit_message_text(
+                    chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown", reply_markup=markup)
+        count = count + 1
     # Restarts the timer so method can be called again
     if firstMsg:
         timer = threading.Timer(5.0, updateMsg, args=(True,))
         timer.start()
+
+
+def getSelectedFlight(msgID, userID):
+    # Create the message in the object
+    if msgID not in selectedFlight:
+        selectedFlight[userID] = {'selectedFlight': ''}
+        flight = getFlightMessageWithMessage(msgID, userID)
+        if len(flight) == 0:
+            return {}
+        flight = flight[0]
+        selectedFlight[userID] = {'selectedFlight': flight[3]}
+    # Code for handaling the button presses in the flight tracking
+    return selectedFlight[userID]['selectedFlight']
 
 
 if (__name__ == "__main__"):
