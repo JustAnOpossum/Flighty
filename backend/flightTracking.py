@@ -105,6 +105,7 @@ def getFlightLocation(registration):
 
     if response.status_code == 200:
         if len(resposeJSON['ac']) != 0:
+            #this is a dictioary
             return {
                 'lat': resposeJSON['ac'][0]['lat'],
                 'lon': resposeJSON['ac'][0]['lon'],
