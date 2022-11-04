@@ -119,6 +119,7 @@ def deleteFlight(flightID, msgID, userID):
     cur = con.cursor()
     result = cur.execute(
         'DELETE FROM Flights WHERE MessageID = ? AND UserID = ? AND FlightCode = ?', (msgID, userID, flightID))
+    con.commit()
 
 # postcondition: Returns all active user IDs
 

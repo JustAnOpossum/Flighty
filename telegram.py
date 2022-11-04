@@ -149,30 +149,29 @@ def main():
         if ':' not in call.data:
             return
         params = call.data.split(':')
-        currentFlight = getSelectedFlight(
-            call.message.id, call.from_user.id)
         # Checks for what each button press could be
         match params[1]:
             # Button is pressed to go to the next flight
             case 'c':
+                getSelectedFlight(call.message.id, str(call.from_user.id))
                 if params[0] != 'N/A':
-                    selectedFlight[call.from_user.id]['selectedFlight'] = params[0]
+                    selectedFlight[str(call.from_user.id)
+                                   ]['selectedFlight'] = params[0]
                     updateMsg(False)
             # Button is pressed to refresh
             case 'r':
                 updateMsg(False)
             # Button is pressed to stop tracking flight
             case 's':
+                getSelectedFlight(call.message.id, str(call.from_user.id))
                 deleteFlight(params[0], call.message.id, call.from_user.id)
-                del selectedFlight[call.from_user.id]
+                del selectedFlight[str(call.from_user.id)]
                 flights = getFlightMessageWithMessage(
                     call.message.id, call.from_user.id)
                 # Checks to see if there are any flights left
                 if len(flights) == 0:
                     bot.edit_message_text(
                         chat_id=call.message.chat.id, text='No Flights Left', message_id=call.message.id)
-                # Resets the selected flight information
-                del selectedFlight[call.from_user.id]
                 updateMsg(False)
     print("Bot Loaded")
 
@@ -198,6 +197,7 @@ def updateMsg(firstMsg):
                 flightMsg[2], flightMsg[0])
             # Finds the current selected message, so that it is the only one that is updated
             if selectedFlightMsg not in flightMsg[3]:
+                count = count + 1
                 continue
 
             nextFlight = ''
@@ -215,14 +215,14 @@ def updateMsg(firstMsg):
             markup = types.InlineKeyboardMarkup(
                 row_width=2)
             forwardBtn = InlineKeyboardButton(
-                "Forward", callback_data='%s:%s' % (nextFlight, 'c'))
+                "--->", callback_data='%s:%s' % (nextFlight, 'c'))
             backwardBtn = InlineKeyboardButton(
-                "Backward", callback_data='%s:%s' % (prevFlight, 'c'))
+                "<---", callback_data='%s:%s' % (prevFlight, 'c'))
             stopBtn = InlineKeyboardButton(
-                "Stop", callback_data='%s:%s' % (flightMsg[3], 's'))
+                "🛑", callback_data='%s:%s' % (flightMsg[3], 's'))
             refreshBtn = InlineKeyboardButton(
-                "Refresh", callback_data='%s:%s' % (flightMsg[3], 'r'))
-            markup.add(forwardBtn, backwardBtn, stopBtn, refreshBtn)
+                "🔄", callback_data='%s:%s' % (flightMsg[3], 'r'))
+            markup.add(backwardBtn, forwardBtn, stopBtn, refreshBtn)
             # Case for if flight has departed
             if flightMsg[18] == "Yes":
                 aircraftLocation = getFlightLocation(flightMsg[16])
@@ -273,7 +273,6 @@ def updateMsg(firstMsg):
                     flightMsg[3], flightMsg[13], flightMsg[12], flightLeavesStr, depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11])
                 bot.edit_message_text(
                     chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown", reply_markup=markup)
-        count = count + 1
     # Restarts the timer so method can be called again
     if firstMsg:
         timer = threading.Timer(5.0, updateMsg, args=(True,))
@@ -282,7 +281,7 @@ def updateMsg(firstMsg):
 
 def getSelectedFlight(msgID, userID):
     # Create the message in the object
-    if msgID not in selectedFlight:
+    if userID not in selectedFlight:
         selectedFlight[userID] = {'selectedFlight': ''}
         flight = getFlightMessageWithMessage(msgID, userID)
         if len(flight) == 0:
