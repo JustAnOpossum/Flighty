@@ -18,7 +18,7 @@ try:
             newLocation = row[5].replace("POINT (", "")
             newLocation = newLocation.replace(")", "")
             split = newLocation.split(" ")
-            newLocation = (split[1], split[0])
+            newLocation = (float(split[1]), float(split[0]))
             airports[row[0]] = {'tz': row[1], 'location': newLocation}
 except:
     print('Error opening CSV file.')
@@ -105,7 +105,7 @@ def getFlightLocation(registration):
 
     if response.status_code == 200:
         if len(resposeJSON['ac']) != 0:
-            #this is a dictioary
+            # this is a dictioary
             return {
                 'lat': resposeJSON['ac'][0]['lat'],
                 'lon': resposeJSON['ac'][0]['lon'],
