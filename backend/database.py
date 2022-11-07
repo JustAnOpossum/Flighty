@@ -66,7 +66,8 @@ def makeDB(fName):
                 `Registration` VARCHAR NOT NULL,
                 `Platform` VARCHAR NOT NULL,
                 `Departed` VARCHAT NOT NULL,
-                `Landed` VARCHAR NOT NULL
+                `Landed` VARCHAR NOT NULL,
+                `Route` VARCHAR
             );
         """)
         # close the connection

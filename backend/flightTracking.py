@@ -47,6 +47,9 @@ def getFlight(flightID):
             # if not flight['actual_in'] == "None":
             # THIS IS AN ARRAY OF DICTIONARIES
             if flight['actual_in'] == None:
+                didDepart = 'No'
+                if flight['actual_out'] != None:
+                    didDepart = 'Yes'
                 flights.append({
                     'flightID': flight['ident'],
                     'Delay': flight['departure_delay'],
@@ -62,33 +65,39 @@ def getFlight(flightID):
                     'ArvLocation': airports[flight['destination']['code_iata']]['location'],
                     'DepLocation': airports[flight['origin']['code_iata']]['location'],
                     'ArvTz': airports[flight['destination']['code_iata']]['tz'],
-                    'DepTz': airports[flight['origin']['code_iata']]['tz']
+                    'DepTz': airports[flight['origin']['code_iata']]['tz'],
+                    'FAID': flight['fa_flight_id'],
+                    'DidDepart': didDepart
                 })
         return flights
     # if the response is unuseable
     else:
         print("Error retrieving flight. Check your flight code!")
         return ({})
-    # print(flights[0])
-    return flights
 
 
-def JsonToDictEntry(jsonFilePath):
-    f = open(jsonFilePath)
-    # print("OPENING JSON")
-    flightJSON = json.load(f)
-    # print("JSON OPENED")
-    f.close()
-    return
-# Tracks more than one flight and returns an array of flight information
-# Input is an array of many flight IDs
+def getFlightRoute(FAID):
+    # variable setup
+    apiKey = getKey('Flight_Aware')
+    apiUrl = "https://aeroapi.flightaware.com/aeroapi/"
+    auth_header = {'x-apikey': apiKey}
+    finalRoutes = []
 
-
-def getManyFlights(flightIDs):
-    allFlights = []
-    for flight in flightIDs:
-        allFlights.append(getFlight(flight))
-    return allFlights
+    response = requests.get(
+        apiUrl + f"flights/{FAID}/route", headers=auth_header)
+    if response.status_code == 200:
+        routeJSON = response.json()
+        for route in routeJSON['fixes']:
+            # Only pulls field where there are coords
+            if route['latitude'] != None and route['longitude'] != None:
+                lat = float("{:.6f}".format(route['latitude']))
+                lon = float("{:.6f}".format(route['longitude']))
+                finalRoutes.append((lon, lat))
+        return finalRoutes
+    else:
+        print(
+            "Error retrieving Route, please try again later or with a different flight code")
+        return []
 
 # Gets the current location for a flight, returning its corrdiantes
 

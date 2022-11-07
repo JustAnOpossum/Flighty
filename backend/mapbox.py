@@ -1,5 +1,5 @@
 import requests
-from credentials import *
+from backend.credentials import *
 import urllib.parse
 import json
 
@@ -10,8 +10,11 @@ def getMap(depAirport, arvAirport, plane, path):
     fdepAirport2 = float("{:.6f}".format(depAirport[1]))
     farvAirport1 = float("{:.6f}".format(arvAirport[0]))
     farvAirport2 = float("{:.6f}".format(arvAirport[1]))
-    fplane1 = float("{:.6f}".format(plane[0]))
-    fplane2 = float("{:.6f}".format(plane[1]))
+    fplane1 = None
+    fplane2 = None
+    if plane != None:
+        fplane1 = float("{:.6f}".format(plane[0]))
+        fplane2 = float("{:.6f}".format(plane[1]))
 
     # Customizable params
     depAirportColor = "#4eba14"
@@ -66,9 +69,18 @@ def getMap(depAirport, arvAirport, plane, path):
             }
         ],
     }
-    for point in path:
-        geoJson['features'][2]['geometry']['coordinates'].append(point)
-    print(json.dumps(geoJson, separators=(',', ':')))
+
+    # Case for generating map when the flight has not taken off yet
+    if plane == None:
+        del geoJson['features'][3]
+    # Case if the route can't be loaded for any reason
+    if path == None:
+        del geoJson['features'][2]
+
+    # Appends the path to the geojson
+    if path != None:
+        for point in path:
+            geoJson['features'][2]['geometry']['coordinates'].append(point)
     requestUrl = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/geojson(%s)/auto/%dx%d?access_token=%s" % (urllib.parse.quote(json.dumps(geoJson, separators=(',', ':'))), width, height, getKey("mapbox")
                                                                                                                         )
     return requestUrl
@@ -76,7 +88,3 @@ def getMap(depAirport, arvAirport, plane, path):
 
 if __name__ == "__main__":
     loadKeys("backend/credentials.txt")
-    print(getMap((29.9841416, -95.3329859561449),
-                 (31.8092748, -106.36664263248113),
-                 (30.748848581706227, -101.64781222368353),
-                 [(-95.3329859561449, 29.9841416), (-106.36664263248113, 31.8092748)]))

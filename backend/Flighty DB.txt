@@ -19,6 +19,7 @@ Flight
 	17 - Platform
 	18 - Departed
 	19 - Landed
+	20 - Route
 
 Flight Entry
 CREATE TABLE `Flights` (
@@ -41,7 +42,8 @@ CREATE TABLE `Flights` (
 	`Registration` VARCHAR NOT NULL,
 	`Platform` VARCHAR NOT NULL,
 	`Departed` VARCHAT NOT NULL,
-	`Landed` VARCHAR NOT NULL
+	`Landed` VARCHAR NOT NULL,
+	`Route` VARCHAR
 );
 
 CONSIDER REMOVING LATITUDE AND LONGITUDE

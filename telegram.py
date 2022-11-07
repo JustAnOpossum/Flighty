@@ -2,6 +2,7 @@ from datetime import datetime
 from backend.credentials import *
 from backend.flightTracking import *
 from backend.database import *
+from backend.mapbox import *
 import telebot
 import zulu
 import threading
@@ -112,6 +113,7 @@ def main():
 
                 case 'checkForMoreFlights':
                     if call.data == 'no':
+                        # Saves all the picked flights to the database
                         for flight in currentFlightUsers[call.from_user.id]['pickedFlights']:
                             dateTime = strftime(
                                 "%Y-%m-%d %H:%M:%S", localtime())
@@ -119,6 +121,10 @@ def main():
                                 '%Y-%m-%d %H:%M:%S')
                             dateTimeDep = zulu.parse(flight['DepTime']).format(
                                 '%Y-%m-%d %H:%M:%S')
+
+                            # Gets the route for the flight to save to the database and generates inital map
+                            routes = getFlightRoute(flight['FAID'])
+
                             newMsg = bot.send_photo(chat_id=call.message.chat.id, caption="Loading your flight...",
                                                     photo='https://cdn.iconscout.com/icon/free/png-256/aeroplane-airplane-plane-air-transportation-vehicle-pessanger-people-emoj-symbol-30708.png')
                             addToFlightDB(
@@ -139,8 +145,9 @@ def main():
                                  flight['DepTz'],
                                  flight['Registration'],
                                  'Telegram',
+                                 flight['DidDepart'],
                                  'No',
-                                 'No'))
+                                 json.dumps(routes)))
                         updateMsg(False)
                         del currentFlightUsers[call.from_user.id]
                     else:
@@ -218,9 +225,9 @@ def updateMsg(firstMsg):
             markup = types.InlineKeyboardMarkup(
                 row_width=2)
             forwardBtn = InlineKeyboardButton(
-                "--->", callback_data='%s:%s' % (nextFlight, 'c'))
+                "➡️", callback_data='%s:%s' % (nextFlight, 'c'))
             backwardBtn = InlineKeyboardButton(
-                "<---", callback_data='%s:%s' % (prevFlight, 'c'))
+                "⬅️", callback_data='%s:%s' % (prevFlight, 'c'))
             stopBtn = InlineKeyboardButton(
                 "🛑", callback_data='%s:%s' % (flightMsg[3], 's'))
             refreshBtn = InlineKeyboardButton(
@@ -258,8 +265,9 @@ def updateMsg(firstMsg):
                     flightMsg[3], flightMsg[13], flightMsg[12], percentStr, int(
                         percentFinished*100), int(milesLeft), depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11]
                 )
-                # bot.edit_message_text(
-                #     chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown", reply_markup=markup)
+                routes = json.loads(flightMsg[20])
+                mapUrl = getMap(airports[flightMsg[13]]['location'],
+                                airports[flightMsg[12]]['location'], planeCoords, routes)
                 editPhotoMessage(
                     flightMsg[2], flightMsg[1], 'https://greyopossum.net/img/full/RedPandaIcon.png', markup, bot, msgTxt)
             # Case if flight is waiting to take off
@@ -276,8 +284,9 @@ def updateMsg(firstMsg):
                     int(hoursLeft[0]), int(minutesLeft[0]))
                 msgTxt = "*Flight:* %s (%s->%s)\n\n*Time until Departure:* %s\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:*\nTerminal *%s*\nGate *%s*\n*Arrival Info:*\nTerminal *%s*\nGate *%s*\n" % (
                     flightMsg[3], flightMsg[13], flightMsg[12], flightLeavesStr, depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11])
-                # bot.edit_message_text(
-                #    chat_id=flightMsg[1], message_id=flightMsg[2], text=msgTxt, parse_mode="markdown", reply_markup=markup)
+                routes = json.loads(flightMsg[20])
+                mapUrl = getMap(airports[flightMsg[13]]['location'],
+                                airports[flightMsg[12]]['location'], None, routes)
                 editPhotoMessage(
                     flightMsg[2], flightMsg[1], 'https://greyopossum.net/img/full/RedPandaIcon.png', markup, bot, msgTxt)
     # Restarts the timer so method can be called again
