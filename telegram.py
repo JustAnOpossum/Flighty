@@ -114,6 +114,8 @@ def main():
                 case 'checkForMoreFlights':
                     if call.data == 'no':
                         # Saves all the picked flights to the database
+                        newMsg = bot.send_photo(chat_id=call.message.chat.id, caption="Loading your flight...",
+                                                photo='https://cdn.iconscout.com/icon/free/png-256/aeroplane-airplane-plane-air-transportation-vehicle-pessanger-people-emoj-symbol-30708.png')
                         for flight in currentFlightUsers[call.from_user.id]['pickedFlights']:
                             dateTime = strftime(
                                 "%Y-%m-%d %H:%M:%S", localtime())
@@ -125,8 +127,6 @@ def main():
                             # Gets the route for the flight to save to the database and generates inital map
                             routes = getFlightRoute(flight['FAID'])
 
-                            newMsg = bot.send_photo(chat_id=call.message.chat.id, caption="Loading your flight...",
-                                                    photo='https://cdn.iconscout.com/icon/free/png-256/aeroplane-airplane-plane-air-transportation-vehicle-pessanger-people-emoj-symbol-30708.png')
                             addToFlightDB(
                                 (call.from_user.id,
                                  call.message.chat.id,
@@ -162,7 +162,7 @@ def main():
         match params[1]:
             # Button is pressed to go to the next flight
             case 'c':
-                getSelectedFlight(call.message.id, str(call.from_user.id))
+                getSelectedFlight(call.message.id, str(call.message.chat.id))
                 if params[0] != 'N/A':
                     selectedFlight[str(call.from_user.id)
                                    ]['selectedFlight'] = params[0]
@@ -172,7 +172,7 @@ def main():
                 updateMsg(False)
             # Button is pressed to stop tracking flight
             case 's':
-                getSelectedFlight(call.message.id, str(call.from_user.id))
+                getSelectedFlight(call.message.id, str(call.message.chat.id))
                 deleteFlight(params[0], call.message.id, call.from_user.id)
                 del selectedFlight[str(call.from_user.id)]
                 flights = getFlightMessageWithMessage(
@@ -204,7 +204,7 @@ def updateMsg(firstMsg):
         # Loops though all flights for a user
         for flightMsg in flightMsgs:
             selectedFlightMsg = getSelectedFlight(
-                flightMsg[2], flightMsg[0])
+                flightMsg[2], flightMsg[1])
             # Finds the current selected message, so that it is the only one that is updated
             if selectedFlightMsg not in flightMsg[3]:
                 count = count + 1
@@ -269,7 +269,7 @@ def updateMsg(firstMsg):
                 mapUrl = getMap(airports[flightMsg[13]]['location'],
                                 airports[flightMsg[12]]['location'], planeCoords, routes)
                 editPhotoMessage(
-                    flightMsg[2], flightMsg[1], 'https://greyopossum.net/img/full/RedPandaIcon.png', markup, bot, msgTxt)
+                    flightMsg[2], flightMsg[1], mapUrl, markup, bot, msgTxt)
             # Case if flight is waiting to take off
             else:
                 depString = zulu.parse(flightMsg[6]).format(
@@ -288,24 +288,24 @@ def updateMsg(firstMsg):
                 mapUrl = getMap(airports[flightMsg[13]]['location'],
                                 airports[flightMsg[12]]['location'], None, routes)
                 editPhotoMessage(
-                    flightMsg[2], flightMsg[1], 'https://greyopossum.net/img/full/RedPandaIcon.png', markup, bot, msgTxt)
+                    flightMsg[2], flightMsg[1], mapUrl, markup, bot, msgTxt)
     # Restarts the timer so method can be called again
     if firstMsg:
         timer = threading.Timer(5.0, updateMsg, args=(True,))
         timer.start()
 
 
-def getSelectedFlight(msgID, userID):
+def getSelectedFlight(msgID, chatID):
     # Create the message in the object
-    if userID not in selectedFlight:
-        selectedFlight[userID] = {'selectedFlight': ''}
-        flight = getFlightMessageWithMessage(msgID, userID)
+    if chatID not in selectedFlight:
+        selectedFlight[chatID] = {'selectedFlight': ''}
+        flight = getFlightMessageWithMessage(msgID, chatID)
         if len(flight) == 0:
             return {}
         flight = flight[0]
-        selectedFlight[userID] = {'selectedFlight': flight[3]}
+        selectedFlight[chatID] = {'selectedFlight': flight[3]}
     # Code for handaling the button presses in the flight tracking
-    return selectedFlight[userID]['selectedFlight']
+    return selectedFlight[chatID]['selectedFlight']
 
 
 def editPhotoMessage(msgID, chatID, newPhotoURL, inlineKeyboard, bot, text):

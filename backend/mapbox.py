@@ -74,11 +74,11 @@ def getMap(depAirport, arvAirport, plane, path):
     if plane == None:
         del geoJson['features'][3]
     # Case if the route can't be loaded for any reason
-    if path == None:
+    if path == None or len(path) == 0:
         del geoJson['features'][2]
 
     # Appends the path to the geojson
-    if path != None:
+    if path != None or len(path) != 0:
         for point in path:
             geoJson['features'][2]['geometry']['coordinates'].append(point)
     requestUrl = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/geojson(%s)/auto/%dx%d?access_token=%s" % (urllib.parse.quote(json.dumps(geoJson, separators=(',', ':'))), width, height, getKey("mapbox")
