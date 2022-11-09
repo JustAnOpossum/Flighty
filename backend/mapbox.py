@@ -5,6 +5,11 @@ import json
 
 
 def getMap(depAirport, arvAirport, plane, path):
+    #dep airpoirt (x,y)
+    #arv the same
+    #plane the same
+    #path is the array of points
+    #returns the url of the picture of the flight path.
     # Trims lat and long to be comatable with mapbox
     fdepAirport1 = float("{:.6f}".format(depAirport[0]))
     fdepAirport2 = float("{:.6f}".format(depAirport[1]))
