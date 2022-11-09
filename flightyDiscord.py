@@ -28,8 +28,8 @@ async def track_flight(ctx, flight_code:discord.Option(str)):
         await ctx.respond(embed=myEmbed)
     else:
         #check if multiple flights exist
-        print(type(flightData))
-        print(len(flightData))
+        #print(type(flightData))
+        #print(len(flightData))
     
         if(len(flightData) > 1):
             print("There are more than one flights with that flight code. We must ask the user which flight they are referring to.")
@@ -52,10 +52,13 @@ async def track_flight(ctx, flight_code:discord.Option(str)):
             
             message = await ctx.send(embed=myEmbed, delete_after=(60*5))
 
-            print(type(ctx))
+            #print(type(ctx))
             
             for flight in myRange:
                 await message.add_reaction(emoteList[flight])
+        else:
+            #one flight exists with that flight code
+            print("There was one flight with this flight code.")
 
 @bot.event
 async def on_raw_reaction_add(payload):
@@ -134,7 +137,11 @@ async def on_raw_reaction_add(payload):
                 str(flightDepCode),
                 str(arvTz),
                 str(depTz),
-                str(flightRegistration)
+                str(flightRegistration),
+                "Discord",
+                "NULL",
+                "NULL",
+                "NULL"
             ]
 
             myEmbed = discord.Embed(title=f"Flight Tracker: {flightDepCode} ✈️ {flightArvCode}", color=0x008080)
@@ -147,6 +154,9 @@ async def on_raw_reaction_add(payload):
             myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {flightArvTerm} Gate: {flightArvGate}", inline=False)
         #print((message.embeds)[0].fields[emoteInt- 1].value)
         myMessage = await message.reply(embed=myEmbed)
+        routes = getFlightRoute(flightData["FAID"])
+        routes = json.dumps(routes)
+        print("My route: " + str(routes))
         #insert data into database
         data = (
             data[0],
@@ -165,7 +175,11 @@ async def on_raw_reaction_add(payload):
             data[13],
             data[14],
             data[15],
-            data[16]
+            data[16],
+            "Discord",
+            "NULL",
+            "NULL",
+            "Route NULL"
         )
         try:
             addToFlightDB(data)
@@ -173,83 +187,62 @@ async def on_raw_reaction_add(payload):
             print(er)
 
         #start the task that updates our message
-        updateTask.start(myMessage, flightCode, flightDepTime, (emoteInt - 1))
+        updateTask.start(myMessage, (emoteInt - 1))
         #add the stop sign as a clickable button to signify a user would like to stop tracking a flight
         await myMessage.add_reaction('🛑')
         return
 
 @tasks.loop(minutes=5)
-async def updateTask(message, flightCode, depTime, index):
-    #message is the message object we are updating
-    #flightCode is the flightCode we have to request from the API
-    #departureTime is not too neccesary here computationally, but will come in handy in selecting the proper flight that a user is referring to
+async def updateTask(message, index):
+    #MESSAGE is the message object we are referencing
+    #FLIGHTCODE CAN BE DELETED WITH DATABASE CALL
+    #DEPTIME CAN BE DELETED WITH DATABASE CALL
+    #INDEX 
 
-    currentTime = strftime("%Y-%m-%d %H:%M:%S", localtime())
-    currentDate = strftime("%m-%d%Y", localtime())
-    print(f"Current Time: {currentTime}\nCurrentDate: {currentDate}")
+    #get the flight data for this message
+    myData = getFlightMessageViaMID(message.id)
+    #this is a dictionary of tuples, we only need the first tuple
+    myData = myData[0]
+    #debug / testing
+    print("MY DATA: " + str(myData))
 
-    #get updated flight datam
-    try:
-        print("Getting flight data!")
-        flightData = getFlight(flightCode)
-    except flightData as er:
-        print(er)
-    
-    #error check flightData to see we got it correctly
-    if(flightData == [] or flightData == None):
-            #if the flight response is shit. this should, in theory, never be called. but i am afraid and have anxiety.
-            myEmbed = discord.Embed(title="Flight Tracker", description="There was an error fetching that flight. Please try again.", color=0xFF0000)
-    else:
-        #here we have a array of dictionaries
-        #dereference to the proper flight info
-        flightData = flightData[index]
-        print(flightData)
-        #information setup
-        flightID = str(flightData["flightID"])
-        flightDelay = str(flightData["Delay"])
-        flightDepTime = str(flightData["DepTime"])
-        flightArvTime = str(flightData["ArvTime"])
-        flightDepTerm = str(flightData["DepTerm"])
-        flightDepGate = str(flightData["DepGate"])
-        flightArvTerm = str(flightData["ArvTerm"])
-        flightArvGate = str(flightData["ArvGate"])
-        flightArvCode = str(flightData["ArvCode"])
-        flightDepCode = str(flightData["DepCode"])
-        flightRegistration = str(flightData["Registration"])
-        arvTz = str(flightData["ArvTz"])
-        depTz = str(flightData["DepTz"])
+    flightCode = myData[3]
+    registration = myData[16]
 
-        #time processing
-        ArvTime = zulu.parse(flightArvTime)
-        DepTime = zulu.parse(flightDepTime)
+    #time processing
+    ArvTime = zulu.parse(myData[7])
+    DepTime = zulu.parse(myData[6])
 
-        formattedArrival = ArvTime.format('%b %d %Y - %I:%M %p %Z', tz=flightData['ArvTz'])
-        formattedDeaprture = DepTime.format('%b %d %Y - %I:%M %p %Z', tz=flightData['DepTz'])
+    formattedArrival = ArvTime.format('%b %d %Y - %I:%M %p %Z', tz=myData[14])
+    formattedDeaprture = DepTime.format('%b %d %Y - %I:%M %p %Z', tz=myData[15])
 
-        #Begin Embed Construction
-        myEmbed = discord.Embed(title=f"Flight Tracker: {flightDepCode} ✈️ {flightArvCode}", color=0x008080)
-        if(int(flightDelay) > 0):
-            myEmbed.add_field(name= "Delay", value=f"{flightDelay} minute(s).", inline = False)
+    #Begin Embed Construction
+    myEmbed = discord.Embed(title=f"Flight Tracker: {myData[12]} ✈️ {myData[13]}", color=0x008080)
+    if(int(myData[5]) > 0):
+        myEmbed.add_field(name= "Delay", value=f"{myData[5]} minute(s).", inline = False)
             
-        myEmbed.add_field(name="Departure & Arrival", value = f"{formattedDeaprture} -> {formattedArrival}", inline=False)
+    myEmbed.add_field(name="Departure & Arrival", value = f"{formattedDeaprture} -> {formattedArrival}", inline=False)
 
-        myEmbed.add_field(name="Departing Gate & Terminal", value=f"Terminal: {flightDepTerm} Gate: {flightDepGate}", inline=False)
-        myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {flightArvTerm} Gate: {flightArvGate}", inline=False)
+    myEmbed.add_field(name="Departing Gate & Terminal", value=f"Terminal: {myData[8]} Gate: {myData[9]}", inline=False)
+    myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {myData[10]} Gate: {myData[11]}", inline=False)
 
-        myEmbed.add_field(name="Last Update: ", value=f"{str(currentTime)}", inline=False)
+    currentTime = strftime("%H:%M", localtime())
+    myEmbed.add_field(name="Last Update: ", value=f"{str(currentTime)}", inline=False)
 
-        locationData = getFlightLocation(flightRegistration)
-        print(type(locationData))
-        print(str(locationData))
-        latitude = None
-        longitude = None
-        if(not locationData == {} or not locationData == None):
-            latitude = locationData["lat"]
-            longitude = locationData["lon"]
-            myEmbed.add_field(name="Position", value=f"Latitude: {latitude} Longitude: {longitude}", inline=False)
+    flightRegistration = myData[16]
+    locationData = getFlightLocation(flightRegistration)
+    #print(type(locationData))
+    #print("YOUR FLIGHT LOCATNON IS: " + str(locationData))
+    latitude = None
+    longitude = None
+    if(locationData == {} or locationData == None):
+        print("There was an error retrieving the flight location data.")
+    else:
+        latitude = locationData["lat"]
+        longitude = locationData["lon"]
+        myEmbed.add_field(name="Position", value=f"Latitude: {latitude} Longitude: {longitude}", inline=False)
 
-        myEmbed.set_image(url="https://media.discordapp.net/attachments/1030302565004488834/1037163252490186864/unnamed.png")
-
+    myEmbed.set_image(url="https://media.discordapp.net/attachments/1030302565004488834/1037163252490186864/unnamed.png")
     #update the message
     await message.edit(embed=myEmbed)
     return

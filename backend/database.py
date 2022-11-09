@@ -65,7 +65,7 @@ def makeDB(fName):
                 `DepTz` VARCHAR NOT NULL,
                 `Registration` VARCHAR NOT NULL,
                 `Platform` VARCHAR NOT NULL,
-                `Departed` VARCHAT NOT NULL,
+                `Departed` VARCHAR NOT NULL,
                 `Landed` VARCHAR NOT NULL,
                 `Route` VARCHAR
             );
@@ -88,6 +88,21 @@ def getFlightMessage(userID):
         # execute the query
         result = cur.execute(
             'SELECT * FROM Flights WHERE UserID = ? ORDER BY DepartureTime', (userID,))
+        result = result.fetchall()  # result now holds our list
+        return result
+    except sqlite3.Error as er:  # error handling
+        print(er)
+        return None
+
+#returns the messageID
+def getFlightMessageViaMID(messageID):
+    try:
+        # initialize our db connection
+        con = sqlite3.connect("backend/flighty.db")
+        cur = con.cursor()
+        # execute the query
+        result = cur.execute(
+            'SELECT * FROM Flights WHERE MessageID = ? ORDER BY DepartureTime', (messageID,))
         result = result.fetchall()  # result now holds our list
         return result
     except sqlite3.Error as er:  # error handling
@@ -139,7 +154,13 @@ def getUsers():
         print(er)
         return None
 
-
+#PUTTING THIS ON HOLD WHILE I REWORK MY DATA MANAGEMENT
+def updateFlightCoords(messageID):
+    #try:
+    con = sqlite3.connect("backend/flighty.db")
+    cur = con.cursor()
+    #execute the update query
+    
 def main():
     makeDB("backend/flighty.db")
 
