@@ -9,6 +9,7 @@ from backend.mapbox import *
 from time import *
 import asyncio
 import zulu
+import urllib.request
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -222,29 +223,35 @@ async def updateTask(message, index, FAID):
     formattedDeaprture = DepTime.format('%I:%M %p %Z', tz=myData[15])
 
     #Begin Embed Construction
-    myEmbed = discord.Embed(title=f"Flight Tracker: {myData[12]} ✈️ {myData[13]}", color=0x008080)
+    myEmbed = discord.Embed(title=f"{myData[12]} ✈️ {myData[13]}", color=0x008080)
+    #if there is a delay, we show it to the user
     if(int(myData[5]) > 0):
         myEmbed.add_field(name= "Delay", value=f"{myData[5]} minute(s).", inline = False)
-            
+    
+    #show departure, arrivval information
     myEmbed.add_field(name="Departure & Arrival", value = f"{formattedDeaprture} -> {formattedArrival}", inline=False)
 
     myEmbed.add_field(name="Departing Gate & Terminal", value=f"Terminal: {myData[8]} \nGate: {myData[9]}", inline=False)
     myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {myData[10]} \nGate: {myData[11]}", inline=False)
 
     currentTime = strftime("%H:%M", localtime())
-    myEmbed.add_field(name="Last Update: ", value=f"{str(currentTime)}", inline=False)
 
+    #this was a temporary debug statement to make sure the message was updating correctly
+    #myEmbed.add_field(name="Last Update: ", value=f"{str(currentTime)}", inline=False)
+
+    #get the registration code, and location data. load in the route list.
     flightRegistration = myData[16]
     locationData = getFlightLocation(flightRegistration)
     planeCoords = (locationData['lat'], locationData['lon'])
-    print("MY LOCATION DATA IS :" + str(planeCoords))
-    print("MY LOCATION DATA TYPE IS: " + str(type(planeCoords)))
+    #print("MY LOCATION DATA IS :" + str(planeCoords))
+    #print("MY LOCATION DATA TYPE IS: " + str(type(planeCoords)))
     routes = myData[20]
     routes = json.loads(routes)
-    print("YOUR ROUTE IS: " + str(routes))
+    #print("YOUR ROUTE IS: " + str(routes))
 
-
+    #get the url that pertains to our map
     mapURL = getMap(depAirportCoords, arvAirportCoords, planeCoords, routes)
+    urllib.request.urlretrieve(mapURL, "FlightMapREDACTED.jpg")
     #print("YOUR FLIGHT LOCATNON IS: " + str(locationData))
     latitude = None
     longitude = None
@@ -253,7 +260,7 @@ async def updateTask(message, index, FAID):
     else:
         latitude = locationData["lat"]
         longitude = locationData["lon"]
-        myEmbed.add_field(name="Position", value=f"Latitude: {latitude} Longitude: {longitude}", inline=False)
+        #myEmbed.add_field(name="Position", value=f"Latitude: {latitude} Longitude: {longitude}", inline=False)
 
     myEmbed.set_image(url=mapURL)
     #update the message
