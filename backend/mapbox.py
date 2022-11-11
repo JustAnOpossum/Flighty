@@ -89,6 +89,8 @@ def getMap(depAirport, arvAirport, plane, path):
             geoJson['features'][2]['geometry']['coordinates'].append(point)
     requestUrl = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/geojson(%s)/auto/%dx%d?access_token=%s" % (urllib.parse.quote(json.dumps(geoJson, separators=(',', ':'))), width, height, getKey("mapbox")
                                                                                                                         )
+    #take request url, reupload to imgbb with an API call using requests
+    
     return requestUrl
 
 
