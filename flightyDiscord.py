@@ -5,6 +5,7 @@ from backend.credentials import *
 from backend.flightTracking import *
 from backend.credentials import *
 from backend.database import *
+from backend.mapbox import *
 from time import *
 import asyncio
 import zulu
@@ -154,6 +155,7 @@ async def on_raw_reaction_add(payload):
             myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {flightArvTerm} Gate: {flightArvGate}", inline=False)
         #print((message.embeds)[0].fields[emoteInt- 1].value)
         myMessage = await message.reply(embed=myEmbed)
+        FAID = flightData["FAID"]
         routes = getFlightRoute(flightData["FAID"])
         routes = json.dumps(routes)
         print("My route: " + str(routes))
@@ -179,7 +181,7 @@ async def on_raw_reaction_add(payload):
             "Discord",
             "NULL",
             "NULL",
-            "Route NULL"
+            routes
         )
         try:
             addToFlightDB(data)
@@ -187,13 +189,13 @@ async def on_raw_reaction_add(payload):
             print(er)
 
         #start the task that updates our message
-        updateTask.start(myMessage, (emoteInt - 1))
+        updateTask.start(myMessage, (emoteInt - 1), FAID)
         #add the stop sign as a clickable button to signify a user would like to stop tracking a flight
         await myMessage.add_reaction('🛑')
         return
 
 @tasks.loop(minutes=5)
-async def updateTask(message, index):
+async def updateTask(message, index, FAID):
     #MESSAGE is the message object we are referencing
     #FLIGHTCODE CAN BE DELETED WITH DATABASE CALL
     #DEPTIME CAN BE DELETED WITH DATABASE CALL
@@ -203,6 +205,9 @@ async def updateTask(message, index):
     myData = getFlightMessageViaMID(message.id)
     #this is a dictionary of tuples, we only need the first tuple
     myData = myData[0]
+    arvAirportCoords = airports[myData[12]]['location']
+    depAirportCoords = airports[myData[13]]['location']
+    #print("MY ORIGIN AIRPORT COoRDS IS: " + str(arvAirportCoords))
     #debug / testing
     print("MY DATA: " + str(myData))
 
@@ -213,8 +218,8 @@ async def updateTask(message, index):
     ArvTime = zulu.parse(myData[7])
     DepTime = zulu.parse(myData[6])
 
-    formattedArrival = ArvTime.format('%b %d %Y - %I:%M %p %Z', tz=myData[14])
-    formattedDeaprture = DepTime.format('%b %d %Y - %I:%M %p %Z', tz=myData[15])
+    formattedArrival = ArvTime.format('%I:%M %p %Z', tz=myData[14])
+    formattedDeaprture = DepTime.format('%I:%M %p %Z', tz=myData[15])
 
     #Begin Embed Construction
     myEmbed = discord.Embed(title=f"Flight Tracker: {myData[12]} ✈️ {myData[13]}", color=0x008080)
@@ -223,15 +228,23 @@ async def updateTask(message, index):
             
     myEmbed.add_field(name="Departure & Arrival", value = f"{formattedDeaprture} -> {formattedArrival}", inline=False)
 
-    myEmbed.add_field(name="Departing Gate & Terminal", value=f"Terminal: {myData[8]} Gate: {myData[9]}", inline=False)
-    myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {myData[10]} Gate: {myData[11]}", inline=False)
+    myEmbed.add_field(name="Departing Gate & Terminal", value=f"Terminal: {myData[8]} \nGate: {myData[9]}", inline=False)
+    myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {myData[10]} \nGate: {myData[11]}", inline=False)
 
     currentTime = strftime("%H:%M", localtime())
     myEmbed.add_field(name="Last Update: ", value=f"{str(currentTime)}", inline=False)
 
     flightRegistration = myData[16]
     locationData = getFlightLocation(flightRegistration)
-    #print(type(locationData))
+    planeCoords = (locationData['lat'], locationData['lon'])
+    print("MY LOCATION DATA IS :" + str(planeCoords))
+    print("MY LOCATION DATA TYPE IS: " + str(type(planeCoords)))
+    routes = myData[20]
+    routes = json.loads(routes)
+    print("YOUR ROUTE IS: " + str(routes))
+
+
+    mapURL = getMap(depAirportCoords, arvAirportCoords, planeCoords, routes)
     #print("YOUR FLIGHT LOCATNON IS: " + str(locationData))
     latitude = None
     longitude = None
@@ -242,7 +255,7 @@ async def updateTask(message, index):
         longitude = locationData["lon"]
         myEmbed.add_field(name="Position", value=f"Latitude: {latitude} Longitude: {longitude}", inline=False)
 
-    myEmbed.set_image(url="https://media.discordapp.net/attachments/1030302565004488834/1037163252490186864/unnamed.png")
+    myEmbed.set_image(url=mapURL)
     #update the message
     await message.edit(embed=myEmbed)
     return
