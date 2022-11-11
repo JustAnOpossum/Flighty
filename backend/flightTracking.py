@@ -114,11 +114,14 @@ def getFlightLocation(registration):
 
     if response.status_code == 200:
         if len(resposeJSON['ac']) != 0:
+            returnDict = {'lat': resposeJSON['ac'][0]['lat'],
+                          'lon': resposeJSON['ac'][0]['lon']}
+
+            # Checks to make sure alt_baro is returned from the API
+            if 'alt_baro' in resposeJSON['ac'][0]:
+                returnDict['alt'] = resposeJSON['ac'][0]['alt_baro']
             # this is a dictioary
-            return {
-                'lat': resposeJSON['ac'][0]['lat'],
-                'lon': resposeJSON['ac'][0]['lon'],
-            }
+            return returnDict
         else:
             return {}
     else:

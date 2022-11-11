@@ -6,7 +6,6 @@ from backend.mapbox import *
 import telebot
 import zulu
 import threading
-from dateutil import parser
 from datetime import *
 import pytz
 from time import *
@@ -26,14 +25,12 @@ def main():
     # Handles start and help commands
     @bot.message_handler(commands=['start', 'help'])
     def send_welcome(message):
-        print('start')
         bot.send_message(
-            message.chat.id, "Welcome to the bot, temporary welcome message. Commands are */trackFlight*", parse_mode="markdown")
+            message.chat.id, "Welcome to flighty! Use /trackFlight to track a flight or many flights.", parse_mode="markdown")
 
     # Handles the track flight command
     @bot.message_handler(commands=['trackFlight'])
     def trackFlight(message):
-        print('track flight')
         bot.send_message(
             message.chat.id, "Please send me your flight number, ex: UA123")
         # Sets that this user is going to use this command
@@ -186,7 +183,7 @@ def main():
     print("Bot Loaded")
 
     # Starts timer for so that the bot can edit messages with new information
-    timer = threading.Timer(30.0, updateMsg, args=(True,))
+    timer = threading.Timer(300.0, updateMsg, args=(True,))
     timer.start()
 
     bot.infinity_polling()
@@ -203,6 +200,13 @@ def updateMsg(firstMsg):
         count = 0
         # Loops though all flights for a user
         for flightMsg in flightMsgs:
+            if flightMsg[17] != 'Telegram':
+                # Restarts the timer so method can be called again
+                if firstMsg:
+                    timer = threading.Timer(300.0, updateMsg, args=(True,))
+                    timer.start()
+                return
+
             selectedFlightMsg = getSelectedFlight(
                 flightMsg[2], flightMsg[1])
             # Finds the current selected message, so that it is the only one that is updated
@@ -241,17 +245,16 @@ def updateMsg(firstMsg):
 
             # Displays the message if the flight has landed
             if flightMsg[19] == "Yes":
+                routes = json.loads(flightMsg[20])
                 arvAirportCoords = airports[flightMsg[12]]['location']
                 depAirportCoords = airports[flightMsg[13]]['location']
                 # Calculates the total distance from airport to airport
                 totalDistance = geopy.distance.great_circle(
                     arvAirportCoords, depAirportCoords).miles
-                msgTxt = "*Flight:* %s (%s🛫%s)\n\n*Flight has landed*\nDistance travelled: %s\n\nArrival Info:*\nTerminal *%s*\nGate *%s*\n" % (
-                    flightMsg[3], flightMsg[13], flightMsg[12], int(
-                        totalDistance), flightMsg[9], flightMsg[10], flightMsg[11]
-                )
+                msgTxt = "*Flight:* %s (%s🛫%s)\n\n*Flight has landed*\n*Total Distance Travelled:* %d miles" % (
+                    flightMsg[3], flightMsg[13], flightMsg[12], int(totalDistance))
                 mapUrl = getMap(airports[flightMsg[13]]['location'],
-                                airports[flightMsg[12]]['location'], planeCoords, routes)
+                                airports[flightMsg[12]]['location'], None, routes)
                 editPhotoMessage(
                     flightMsg[2], flightMsg[1], mapUrl, markup, bot, msgTxt)
 
@@ -312,7 +315,7 @@ def updateMsg(firstMsg):
                     flightMsg[2], flightMsg[1], mapUrl, markup, bot, msgTxt)
     # Restarts the timer so method can be called again
     if firstMsg:
-        timer = threading.Timer(20.0, updateMsg, args=(True,))
+        timer = threading.Timer(300.0, updateMsg, args=(True,))
         timer.start()
 
 

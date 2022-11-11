@@ -136,7 +136,7 @@ def deleteFlight(flightID, msgID, userID):
     # initialize our db connection
     con = sqlite3.connect("backend/flighty.db")
     cur = con.cursor()
-    result = cur.execute(
+    cur.execute(
         'DELETE FROM Flights WHERE MessageID = ? AND UserID = ? AND FlightCode = ?', (msgID, userID, flightID))
     con.commit()
 
@@ -157,14 +157,46 @@ def getUsers():
         print(er)
         return None
 
-# PUTTING THIS ON HOLD WHILE I REWORK MY DATA MANAGEMENT
+
+# postcondition: Returns all flights
 
 
-def updateFlightCoords(messageID):
-    # try:
+def getAllFlights():
+    try:
+        # initialize our db connection
+        con = sqlite3.connect("backend/flighty.db")
+        cur = con.cursor()
+        # execute the query
+        result = cur.execute(
+            'SELECT * FROM Flights WHERE Landed="No"')
+        result = result.fetchall()  # result now holds our list
+        return result
+    except sqlite3.Error as er:  # error handling
+        print(er)
+        return None
+
+
+# postcondition: Updates if a flight has departed in the database
+
+
+def updateDeparture(departedStr, landedStr, flightID, msgID, userID):
+    # initialize our db connection
     con = sqlite3.connect("backend/flighty.db")
     cur = con.cursor()
-    # execute the update query
+    cur.execute(
+        'UPDATE Flights SET Departed = ?, Landed = ? WHERE MessageID = ? AND UserID = ? AND FlightCode = ?', (departedStr, landedStr, msgID, userID, flightID))
+    con.commit()
+
+# postcondition: Deletes all flights with arrival times older than 5 days
+
+
+def deleteOldFlights():
+    # initialize our db connection
+    con = sqlite3.connect("backend/flighty.db")
+    cur = con.cursor()
+    cur.execute(
+        'DELETE FROM Flights WHERE DepartureTime <= date("now", "-5 day")')
+    con.commit()
 
 
 def main():
