@@ -162,9 +162,10 @@ def main():
         match params[1]:
             # Button is pressed to go to the next flight
             case 'c':
-                getSelectedFlight(call.message.id, str(call.message.chat.id))
+                getSelectedFlight(str(call.message.id),
+                                  str(call.message.chat.id))
                 if params[0] != 'N/A':
-                    selectedFlight[str(call.from_user.id)
+                    selectedFlight[str(call.message.id)
                                    ]['selectedFlight'] = params[0]
                     updateMsg(False)
             # Button is pressed to refresh
@@ -172,22 +173,21 @@ def main():
                 updateMsg(False)
             # Button is pressed to stop tracking flight
             case 's':
-                getSelectedFlight(call.message.id, str(call.message.chat.id))
+                getSelectedFlight(str(call.message.id),
+                                  str(call.message.chat.id))
                 deleteFlight(params[0], call.message.id, call.from_user.id)
-                del selectedFlight[str(call.from_user.id)]
+                del selectedFlight[str(call.message.id)]
                 flights = getFlightMessageWithMessage(
                     call.message.id, call.from_user.id)
                 # Checks to see if there are any flights left
                 if len(flights) == 0:
-                    # TODO: Fix message image, (map)
-                    bot.edit_message_text(
-                        chat_id=call.message.chat.id, text='No Flights Left', message_id=call.message.id)
-                updateMsg(False)
+                    editPhotoMessage(call.message.id, call.message.chat.id, 'https://cdn.iconscout.com/icon/free/png-256/aeroplane-airplane-plane-air-transportation-vehicle-pessanger-people-emoj-symbol-30708.png',
+                                     None, bot, 'No more flights to track for this message.')
     print("Bot Loaded")
 
     # Starts timer for so that the bot can edit messages with new information
-    # timer = threading.Timer(5.0, updateMsg, args=(True,))
-    # timer.start()
+    timer = threading.Timer(30.0, updateMsg, args=(True,))
+    timer.start()
 
     bot.infinity_polling()
 
@@ -233,49 +233,70 @@ def updateMsg(firstMsg):
             refreshBtn = InlineKeyboardButton(
                 "🔄", callback_data='%s:%s' % (flightMsg[3], 'r'))
             markup.add(backwardBtn, forwardBtn, stopBtn, refreshBtn)
-            # Case for if flight has departed
-            if flightMsg[18] == "Yes":
-                aircraftLocation = getFlightLocation(flightMsg[16])
-                if len(aircraftLocation) == 0:
-                    continue
-                # Gets the coords of the airports
+
+            depString = zulu.parse(flightMsg[6]).format(
+                '%I:%M %p %Z', tz=flightMsg[15])
+            arvString = zulu.parse(flightMsg[7]).format(
+                '%I:%M %p %Z', tz=flightMsg[14])
+
+            # Displays the message if the flight has landed
+            if flightMsg[19] == "Yes":
                 arvAirportCoords = airports[flightMsg[12]]['location']
                 depAirportCoords = airports[flightMsg[13]]['location']
-                planeCoords = (
-                    aircraftLocation['lat'], aircraftLocation['lon'])
-                # Calculates how many miles left the plane has to go
-                milesLeft = geopy.distance.great_circle(
-                    arvAirportCoords, planeCoords).miles
                 # Calculates the total distance from airport to airport
                 totalDistance = geopy.distance.great_circle(
                     arvAirportCoords, depAirportCoords).miles
-                # Calculates the percent finished the flight has
-                percentFinished = ((totalDistance - milesLeft)/totalDistance)
-                percentStr = ""
-                depString = zulu.parse(flightMsg[6]).format(
-                    '%b %d %Y - %I:%M %p %Z', tz=flightMsg[15])
-                arvString = zulu.parse(flightMsg[7]).format(
-                    '%b %d %Y - %I:%M %p %Z', tz=flightMsg[14])
-                for i in range(0, 10):
-                    if int(percentFinished * 10) == i:
-                        percentStr = percentStr + '✈️'
-                    else:
-                        percentStr = percentStr + '-'
-                msgTxt = "*Flight:* %s (%s🛫%s)\n\n*Flight Progress:* %s (%d Percent)\n*Miles Left:* %d\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:*\nTerminal *%s*\nGate *%s*\n*Arrival Info:*\nTerminal *%s*\nGate *%s*\n" % (
-                    flightMsg[3], flightMsg[13], flightMsg[12], percentStr, int(
-                        percentFinished*100), int(milesLeft), depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11]
+                msgTxt = "*Flight:* %s (%s🛫%s)\n\n*Flight has landed*\nDistance travelled: %s\n\nArrival Info:*\nTerminal *%s*\nGate *%s*\n" % (
+                    flightMsg[3], flightMsg[13], flightMsg[12], int(
+                        totalDistance), flightMsg[9], flightMsg[10], flightMsg[11]
                 )
-                routes = json.loads(flightMsg[20])
                 mapUrl = getMap(airports[flightMsg[13]]['location'],
                                 airports[flightMsg[12]]['location'], planeCoords, routes)
                 editPhotoMessage(
                     flightMsg[2], flightMsg[1], mapUrl, markup, bot, msgTxt)
+
+            # Case for if flight has departed
+            if flightMsg[18] == "Yes" and flightMsg[19] == "No":
+                aircraftLocation = getFlightLocation(flightMsg[16])
+                msgTxt = ''
+                mapUrl = ''
+                routes = json.loads(flightMsg[20])
+                if len(aircraftLocation) == 0:
+                    msgTxt = "*Flight:* %s (%s🛫%s)\n\n*Error Getting Flight Location*\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:*\nTerminal *%s*\nGate *%s*\n*Arrival Info:*\nTerminal *%s*\nGate *%s*\n" % (
+                        flightMsg[3], flightMsg[13], flightMsg[12], depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11])
+                    mapUrl = getMap(airports[flightMsg[13]]['location'],
+                                    airports[flightMsg[12]]['location'], None, routes)
+                else:
+                    # Gets the coords of the airports
+                    arvAirportCoords = airports[flightMsg[12]]['location']
+                    depAirportCoords = airports[flightMsg[13]]['location']
+                    planeCoords = (
+                        aircraftLocation['lat'], aircraftLocation['lon'])
+                    # Calculates how many miles left the plane has to go
+                    milesLeft = geopy.distance.great_circle(
+                        arvAirportCoords, planeCoords).miles
+                    # Calculates the total distance from airport to airport
+                    totalDistance = geopy.distance.great_circle(
+                        arvAirportCoords, depAirportCoords).miles
+                    # Calculates the percent finished the flight has
+                    percentFinished = (
+                        (totalDistance - milesLeft)/totalDistance)
+                    percentStr = ""
+                    for i in range(0, 10):
+                        if int(percentFinished * 10) == i:
+                            percentStr = percentStr + '✈️'
+                        else:
+                            percentStr = percentStr + '-'
+                    msgTxt = "*Flight:* %s (%s🛫%s)\n\n*Flight Progress:* %s (%d Percent)\n*Miles Left:* %d\n\n*Departure:* %s\n*Arrival:* %s\n\n*Departure Info:*\nTerminal *%s*\nGate *%s*\n*Arrival Info:*\nTerminal *%s*\nGate *%s*\n" % (
+                        flightMsg[3], flightMsg[13], flightMsg[12], percentStr, int(
+                            percentFinished*100), int(milesLeft), depString, arvString, flightMsg[8], flightMsg[9], flightMsg[10], flightMsg[11]
+                    )
+                    mapUrl = getMap(airports[flightMsg[13]]['location'],
+                                    airports[flightMsg[12]]['location'], planeCoords, routes)
+                editPhotoMessage(
+                    flightMsg[2], flightMsg[1], mapUrl, markup, bot, msgTxt)
             # Case if flight is waiting to take off
-            else:
-                depString = zulu.parse(flightMsg[6]).format(
-                    '%b %d %Y - %I:%M %p %Z', tz=flightMsg[15])
-                arvString = zulu.parse(flightMsg[7]).format(
-                    '%b %d %Y - %I:%M %p %Z', tz=flightMsg[14])
+            elif flightMsg[19] == "No":
                 flightLeavesTime = (zulu.parse(flightMsg[7]) - utc.localize(
                     datetime.now())).total_seconds()
                 hoursLeft = divmod(flightLeavesTime, 3600)
@@ -291,21 +312,21 @@ def updateMsg(firstMsg):
                     flightMsg[2], flightMsg[1], mapUrl, markup, bot, msgTxt)
     # Restarts the timer so method can be called again
     if firstMsg:
-        timer = threading.Timer(5.0, updateMsg, args=(True,))
+        timer = threading.Timer(20.0, updateMsg, args=(True,))
         timer.start()
 
 
 def getSelectedFlight(msgID, chatID):
     # Create the message in the object
-    if chatID not in selectedFlight:
-        selectedFlight[chatID] = {'selectedFlight': ''}
+    if msgID not in selectedFlight:
+        selectedFlight[msgID] = {'selectedFlight': ''}
         flight = getFlightMessageWithMessage(msgID, chatID)
         if len(flight) == 0:
             return {}
         flight = flight[0]
-        selectedFlight[chatID] = {'selectedFlight': flight[3]}
+        selectedFlight[msgID] = {'selectedFlight': flight[3]}
     # Code for handaling the button presses in the flight tracking
-    return selectedFlight[chatID]['selectedFlight']
+    return selectedFlight[msgID]['selectedFlight']
 
 
 def editPhotoMessage(msgID, chatID, newPhotoURL, inlineKeyboard, bot, text):

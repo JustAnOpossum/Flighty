@@ -78,6 +78,7 @@ def makeDB(fName):
     return
 
 # postcondition: Returns flight messages sorted by flight departure time
+# Only gets messages for telegram
 
 
 def getFlightMessage(userID):
@@ -94,7 +95,9 @@ def getFlightMessage(userID):
         print(er)
         return None
 
-#returns the messageID
+# returns the messageID
+
+
 def getFlightMessageViaMID(messageID):
     try:
         # initialize our db connection
@@ -154,13 +157,16 @@ def getUsers():
         print(er)
         return None
 
-#PUTTING THIS ON HOLD WHILE I REWORK MY DATA MANAGEMENT
+# PUTTING THIS ON HOLD WHILE I REWORK MY DATA MANAGEMENT
+
+
 def updateFlightCoords(messageID):
-    #try:
+    # try:
     con = sqlite3.connect("backend/flighty.db")
     cur = con.cursor()
-    #execute the update query
-    
+    # execute the update query
+
+
 def main():
     makeDB("backend/flighty.db")
 

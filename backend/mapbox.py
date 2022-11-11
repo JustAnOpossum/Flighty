@@ -19,6 +19,7 @@ def getMap(depAirport, arvAirport, plane, path):
     # Customizable params
     depAirportColor = "#4eba14"
     arvAirportColor = "#fcba03"
+    planeColor = "#35b6c4"
     pathColor = "#000000"
     width = 500
     height = 300
@@ -60,7 +61,7 @@ def getMap(depAirport, arvAirport, plane, path):
                 "type": "Feature",
                 "properties": {
                     "marker-symbol": "airport",
-                    "marker-color": depAirportColor
+                    "marker-color": planeColor
                 },
                 "geometry": {
                     "coordinates": [fplane2, fplane1],
