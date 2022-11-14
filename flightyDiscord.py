@@ -223,8 +223,9 @@ async def updateTask(message, index, FAID):
     formattedDeaprture = DepTime.format('%I:%M %p %Z', tz=myData[15])
 
     #Begin Embed Construction
-    myEmbed = discord.Embed(title=f"{myData[12]} ✈️ {myData[13]}", color=0x008080)
+    myEmbed = discord.Embed(title=f"{myData[13]} ✈️ {myData[12]}", color=0x008080)
     #if there is a delay, we show it to the user
+    ##FIXME REMOVE STRANGE DELAY TIMES
     if(int(myData[5]) > 0):
         myEmbed.add_field(name= "Delay", value=f"{myData[5]} minute(s).", inline = False)
     
@@ -263,6 +264,7 @@ async def updateTask(message, index, FAID):
         #myEmbed.add_field(name="Position", value=f"Latitude: {latitude} Longitude: {longitude}", inline=False)
 
     myEmbed.set_image(url=mapURL)
+    #myEmbed.set_image()
     #update the message
     await message.edit(embed=myEmbed)
     return

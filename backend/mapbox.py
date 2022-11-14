@@ -90,9 +90,16 @@ def getMap(depAirport, arvAirport, plane, path):
     requestUrl = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/geojson(%s)/auto/%dx%d?access_token=%s" % (urllib.parse.quote(json.dumps(geoJson, separators=(',', ':'))), width, height, getKey("mapbox")
                                                                                                                         )
     #take request url, reupload to imgbb with an API call using requests
-    
-    return requestUrl
-
+    url = f"https://api.imgbb.com/1/upload?expiration=600&key={getKey('ImgBB')}&name=myMap"
+    myFiles = {'image' : requestUrl}
+    myData = requests.post(url, data=myFiles)
+    myJsonData = myData.json()
+    if(myData.status_code == 200):
+        print(str(myJsonData['data']['url']))
+        print(type(myJsonData['data']['url']))
+        return myJsonData['data']['url']
+    else:
+        return "https://upload.wikimedia.org/wikipedia/commons/f/f7/Generic_error_message.png"
 
 if __name__ == "__main__":
     loadKeys("backend/credentials.txt")
