@@ -112,6 +112,7 @@ async def on_raw_reaction_add(payload):
             flightRegistration = str(flightData["Registration"])
             arvTz = str(flightData["ArvTz"])
             depTz = str(flightData["DepTz"])
+            didDepart = str(flightData["DidDepart"])
 
             ArvTime = zulu.parse(flightArvTime)
             DepTime = zulu.parse(flightDepTime)
@@ -141,8 +142,8 @@ async def on_raw_reaction_add(payload):
                 str(depTz),
                 str(flightRegistration),
                 "Discord",
-                "NULL",
-                "NULL",
+                didDepart,
+                "No",
                 "NULL"
             ]
 
@@ -180,8 +181,8 @@ async def on_raw_reaction_add(payload):
             data[15],
             data[16],
             "Discord",
-            "NULL",
-            "NULL",
+            didDepart,
+            "No",
             routes
         )
         try:
@@ -197,74 +198,86 @@ async def on_raw_reaction_add(payload):
 
 @tasks.loop(minutes=5)
 async def updateTask(message, index, FAID):
-    #MESSAGE is the message object we are referencing
-    #FLIGHTCODE CAN BE DELETED WITH DATABASE CALL
-    #DEPTIME CAN BE DELETED WITH DATABASE CALL
-    #INDEX 
-
     #get the flight data for this message
     myData = getFlightMessageViaMID(message.id)
     #this is a dictionary of tuples, we only need the first tuple
     myData = myData[0]
-    arvAirportCoords = airports[myData[12]]['location']
-    depAirportCoords = airports[myData[13]]['location']
-    #print("MY ORIGIN AIRPORT COoRDS IS: " + str(arvAirportCoords))
-    #debug / testing
-    print("MY DATA: " + str(myData))
-
-    flightCode = myData[3]
-    registration = myData[16]
-
-    #time processing
-    ArvTime = zulu.parse(myData[7])
-    DepTime = zulu.parse(myData[6])
-
-    formattedArrival = ArvTime.format('%I:%M %p %Z', tz=myData[14])
-    formattedDeaprture = DepTime.format('%I:%M %p %Z', tz=myData[15])
 
     #Begin Embed Construction
     myEmbed = discord.Embed(title=f"{myData[13]} ✈️ {myData[12]}", color=0x008080)
-    #if there is a delay, we show it to the user
-    ##FIXME REMOVE STRANGE DELAY TIMES
-    if(int(myData[5]) > 0):
-        myEmbed.add_field(name= "Delay", value=f"{myData[5]} minute(s).", inline = False)
-    
-    #show departure, arrivval information
-    myEmbed.add_field(name="Departure & Arrival", value = f"{formattedDeaprture} -> {formattedArrival}", inline=False)
 
-    myEmbed.add_field(name="Departing Gate & Terminal", value=f"Terminal: {myData[8]} \nGate: {myData[9]}", inline=False)
-    myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {myData[10]} \nGate: {myData[11]}", inline=False)
+    #Cases:
+        #Case 1: flight has landed.
+        #Case 2: Flight is en route
+        #Case 3: Flight is waiting to depart.
+    if myData[19] == "Yes":
+        #print("Flight has landed!")
+        myEmbed.add_field(name="Your flight has landed! Safe travels!", value="Thank you for using Flighty!", inline=False)
+        myEmbed.set_image(url="https://media.discordapp.net/attachments/322582394416791553/1042503782568837292/flightLanded.jpg?width=701&height=701")
+    #if the plane is currently en route
+    elif myData[18] == "Yes" and myData[19] == "No":
+        #print("Flight is en route.")
+        arvAirportCoords = airports[myData[12]]['location']
+        depAirportCoords = airports[myData[13]]['location']
+        #print("MY ORIGIN AIRPORT COoRDS IS: " + str(arvAirportCoords))
+        #debug / testing
+        print("MY DATA: " + str(myData))
 
-    currentTime = strftime("%H:%M", localtime())
+        flightCode = myData[3]
+        registration = myData[16]
 
-    #this was a temporary debug statement to make sure the message was updating correctly
-    #myEmbed.add_field(name="Last Update: ", value=f"{str(currentTime)}", inline=False)
+        #time processing
+        ArvTime = zulu.parse(myData[7])
+        DepTime = zulu.parse(myData[6])
 
-    #get the registration code, and location data. load in the route list.
-    flightRegistration = myData[16]
-    locationData = getFlightLocation(flightRegistration)
-    planeCoords = (locationData['lat'], locationData['lon'])
-    #print("MY LOCATION DATA IS :" + str(planeCoords))
-    #print("MY LOCATION DATA TYPE IS: " + str(type(planeCoords)))
-    routes = myData[20]
-    routes = json.loads(routes)
-    #print("YOUR ROUTE IS: " + str(routes))
+        formattedArrival = ArvTime.format('%I:%M %p %Z', tz=myData[14])
+        formattedDeaprture = DepTime.format('%I:%M %p %Z', tz=myData[15])
 
-    #get the url that pertains to our map
-    mapURL = getMap(depAirportCoords, arvAirportCoords, planeCoords, routes)
-    urllib.request.urlretrieve(mapURL, "FlightMapREDACTED.jpg")
-    #print("YOUR FLIGHT LOCATNON IS: " + str(locationData))
-    latitude = None
-    longitude = None
-    if(locationData == {} or locationData == None):
-        print("There was an error retrieving the flight location data.")
-    else:
-        latitude = locationData["lat"]
-        longitude = locationData["lon"]
-        #myEmbed.add_field(name="Position", value=f"Latitude: {latitude} Longitude: {longitude}", inline=False)
+        #if there is a reasonable (not bugged or impossible) delay, we show it to the user
+        delay = int(myData[5])
+        if (delay < 0 or delay > 2500):
+            myEmbed.add_field(name= "Delay", value=f"{myData[5]} minute(s).", inline = False)
+        
+        #show departure, arrivval information
+        myEmbed.add_field(name="Departure & Arrival", value = f"{formattedDeaprture} -> {formattedArrival}", inline=False)
 
-    myEmbed.set_image(url=mapURL)
-    #myEmbed.set_image()
+        myEmbed.add_field(name="Departing Gate & Terminal", value=f"Terminal: {myData[8]} \nGate: {myData[9]}", inline=False)
+        myEmbed.add_field(name="Arriving Gate & Terminal", value=f"Terminal: {myData[10]} \nGate: {myData[11]}", inline=False)
+
+        currentTime = strftime("%H:%M", localtime())
+
+        #this was a temporary debug statement to make sure the message was updating correctly
+        #myEmbed.add_field(name="Last Update: ", value=f"{str(currentTime)}", inline=False)
+
+        #get the registration code, and location data. load in the route list.
+        flightRegistration = myData[16]
+        locationData = getFlightLocation(flightRegistration)
+        planeCoords = (locationData['lat'], locationData['lon'])
+        #print("MY LOCATION DATA IS :" + str(planeCoords))
+        #print("MY LOCATION DATA TYPE IS: " + str(type(planeCoords)))
+        routes = myData[20]
+        routes = json.loads(routes)
+        #print("YOUR ROUTE IS: " + str(routes))
+
+        #get the url that pertains to our map
+        mapURL = getMap(depAirportCoords, arvAirportCoords, planeCoords, routes)
+        urllib.request.urlretrieve(mapURL, "FlightMapREDACTED.jpg")
+        #print("YOUR FLIGHT LOCATNON IS: " + str(locationData))
+        latitude = None
+        longitude = None
+        if(locationData == {} or locationData == None):
+            print("There was an error retrieving the flight location data.")
+        else:
+            latitude = locationData["lat"]
+            longitude = locationData["lon"]
+            #myEmbed.add_field(name="Position", value=f"Latitude: {latitude} Longitude: {longitude}", inline=False)
+
+        myEmbed.set_image(url=mapURL)
+    elif myData[19] == "No":
+        #here is if the flight has not departed
+        #print("Flight not departed.")
+        myEmbed.add_field(name="Your flight has not departed yet! Hang tight!",value="Thank you for using Flighty!", inline=False)
+        myEmbed.set_image(url="https://media.discordapp.net/attachments/322582394416791553/1042503782833061928/waitForDepart.jpg?width=701&height=701")
     #update the message
     await message.edit(embed=myEmbed)
     return
