@@ -205,7 +205,7 @@ def updateMsg(firstMsg):
                 if firstMsg:
                     timer = threading.Timer(300.0, updateMsg, args=(True,))
                     timer.start()
-                return
+                continue
 
             selectedFlightMsg = getSelectedFlight(
                 flightMsg[2], flightMsg[1])

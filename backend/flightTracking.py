@@ -46,7 +46,7 @@ def getFlight(flightID):
             # FIXME if you want to show a past flight for debug / visual purposes, negate the statement below
             # if not flight['actual_in'] == "None":
             # THIS IS AN ARRAY OF DICTIONARIES
-            if flight['actual_in'] == None:
+            if flight['actual_in'] == None and flight['cancelled'] == False:
                 didDepart = 'No'
                 if flight['actual_out'] != None:
                     didDepart = 'Yes'

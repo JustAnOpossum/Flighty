@@ -5,11 +5,11 @@ import json
 
 
 def getMap(depAirport, arvAirport, plane, path):
-    #dep airpoirt (x,y)
-    #arv the same
-    #plane the same
-    #path is the array of points
-    #returns the url of the picture of the flight path.
+    # dep airpoirt (x,y)
+    # arv the same
+    # plane the same
+    # path is the array of points
+    # returns the url of the picture of the flight path.
     # Trims lat and long to be comatable with mapbox
     fdepAirport1 = float("{:.6f}".format(depAirport[0]))
     fdepAirport2 = float("{:.6f}".format(depAirport[1]))
@@ -89,17 +89,16 @@ def getMap(depAirport, arvAirport, plane, path):
             geoJson['features'][2]['geometry']['coordinates'].append(point)
     requestUrl = "https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/geojson(%s)/auto/%dx%d?access_token=%s" % (urllib.parse.quote(json.dumps(geoJson, separators=(',', ':'))), width, height, getKey("mapbox")
                                                                                                                         )
-    #take request url, reupload to imgbb with an API call using requests
+    # take request url, reupload to imgbb with an API call using requests
     url = f"https://api.imgbb.com/1/upload?expiration=600&key={getKey('ImgBB')}&name=myMap"
-    myFiles = {'image' : requestUrl}
+    myFiles = {'image': requestUrl}
     myData = requests.post(url, data=myFiles)
     myJsonData = myData.json()
-    if(myData.status_code == 200):
-        print(str(myJsonData['data']['url']))
-        print(type(myJsonData['data']['url']))
+    if (myData.status_code == 200):
         return myJsonData['data']['url']
     else:
         return "https://upload.wikimedia.org/wikipedia/commons/f/f7/Generic_error_message.png"
+
 
 if __name__ == "__main__":
     loadKeys("backend/credentials.txt")
