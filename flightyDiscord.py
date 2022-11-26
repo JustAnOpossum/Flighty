@@ -9,7 +9,7 @@ from backend.mapbox import *
 from time import *
 import asyncio
 import zulu
-import urllib.request
+import threading
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -22,6 +22,8 @@ emoteDict = {'1️⃣': 1, '2️⃣': 2, '3️⃣': 3, '4️⃣': 4,
 
 @bot.slash_command(name="track_flight", description="Enter a flight code to begin tracking your flight. Ex. /track_flight UAL1")
 async def track_flight(ctx, flight_code: discord.Option(str)):
+    myReply = await ctx.respond("Loading... please wait!")
+    print(type(myReply))
     try:
         print("Getting flight data!")
         flightData = getFlight(flight_code)
@@ -69,7 +71,7 @@ async def track_flight(ctx, flight_code: discord.Option(str)):
         else:
             # one flight exists with that flight code
             print("There was one flight with this flight code.")
-
+    await myReply.delete_original_response()
 
 @bot.event
 async def on_raw_reaction_add(payload):
@@ -208,14 +210,26 @@ async def on_raw_reaction_add(payload):
             print(er)
 
         # start the task that updates our message
-        updateTask.start(myMessage, (emoteInt - 1), FAID)
+        updateTask.start(myMessage)
         # add the stop sign as a clickable button to signify a user would like to stop tracking a flight
         await myMessage.add_reaction('🛑')
+        loop = asyncio.get_event_loop()
+        await loop.run_until_complete(testThread(message))
+        #timer = threading.Timer(10.0, testThread, args=(message,))
+        #timer.start()
         return
+
+#@bot.event
+async def testThread(message):
+    print(type(message))
+    currentTime = strftime("%H:%M:%S", localtime())
+    await message.reply("Current Time : " + str(currentTime))
+    return
+
 
 
 @tasks.loop(minutes=5)
-async def updateTask(message, index, FAID):
+async def updateTask(message):
     # get the flight data for this message
     myData = getFlightMessageViaMID(message.id)
     # this is a dictionary of tuples, we only need the first tuple
