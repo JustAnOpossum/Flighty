@@ -157,10 +157,21 @@ def getUsers():
         print(er)
         return None
 
+#precondition, there exist some flights that have not landed and were added using the discord platform
+def getDiscordFlights():
+    try:
+        con = sqlite3.connect("backend/flighty.db")
+        cur = con.cursor()
+        #execute the query
+        result = cur.execute('SELECT * FROM Flights WHERE Landed = "No" AND Platform = "Discord"')
+        result = result.fetchall()
+        return result
+    except sqlite3.Error as er:
+        print(er)
+        return None
+#postcondition, a list of flights on the discord platform, or None if an error was thrown
 
 # postcondition: Returns all flights
-
-
 def getAllFlights():
     try:
         # initialize our db connection
@@ -177,8 +188,6 @@ def getAllFlights():
 
 
 # postcondition: Updates if a flight has departed in the database
-
-
 def updateDeparture(departedStr, landedStr, flightID, msgID, userID):
     # initialize our db connection
     con = sqlite3.connect("backend/flighty.db")
@@ -188,8 +197,6 @@ def updateDeparture(departedStr, landedStr, flightID, msgID, userID):
     con.commit()
 
 # postcondition: Deletes all flights with arrival times older than 5 days
-
-
 def deleteOldFlights():
     # initialize our db connection
     con = sqlite3.connect("backend/flighty.db")
