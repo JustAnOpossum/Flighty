@@ -260,6 +260,7 @@ async def multiUpdate():
                           value="Thank you for using Flighty!", inline=False)
             myEmbed.set_image(
                 url="https://media.discordapp.net/attachments/322582394416791553/1042503782568837292/flightLanded.jpg?width=701&height=701")
+            flightArray.remove(flight)
         # if the plane is currently en route
         elif myData[18] == "Yes" and myData[19] == "No":
             #print("Flight is en route.")
