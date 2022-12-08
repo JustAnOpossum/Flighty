@@ -81,14 +81,14 @@ def makeDB(fName):
 # Only gets messages for telegram
 
 
-def getFlightMessage(userID):
+def getFlightMessage(msgID):
     try:
         # initialize our db connection
         con = sqlite3.connect("backend/flighty.db")
         cur = con.cursor()
         # execute the query
         result = cur.execute(
-            'SELECT * FROM Flights WHERE UserID = ? ORDER BY DepartureTime', (userID,))
+            'SELECT * FROM Flights WHERE MessageID = ? ORDER BY DepartureTime', (msgID,))
         result = result.fetchall()  # result now holds our list
         return result
     except sqlite3.Error as er:  # error handling
@@ -143,14 +143,14 @@ def deleteFlight(flightID, msgID, userID):
 # postcondition: Returns all active user IDs
 
 
-def getUsers():
+def getMsgs():
     try:
         # initialize our db connection
         con = sqlite3.connect("backend/flighty.db")
         cur = con.cursor()
         # execute the query
         result = cur.execute(
-            'SELECT DISTINCT UserID FROM Flights')
+            'SELECT DISTINCT MessageID FROM Flights')
         result = result.fetchall()  # result now holds our list
         return result
     except sqlite3.Error as er:  # error handling
