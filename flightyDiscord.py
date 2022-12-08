@@ -19,13 +19,15 @@ emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣',
 emoteDict = {'1️⃣': 1, '2️⃣': 2, '3️⃣': 3, '4️⃣': 4,
              '5️⃣': 5, '6️⃣': 6, '7️⃣': 7, '8️⃣': 8, '9️⃣': 9, '🔟': 10}
 
+flightArray = []
+
 
 @bot.slash_command(name="track_flight", description="Enter a flight code to begin tracking your flight. Ex. /track_flight UAL1")
 async def track_flight(ctx, flight_code: discord.Option(str)):
     myReply = await ctx.respond("Loading... please wait!")
-    print(type(myReply))
+    #print(type(myReply))
     try:
-        print("Getting flight data!")
+        #print("Getting flight data!")
         flightData = getFlight(flight_code)
     except flightData as er:
         print(er)
@@ -89,6 +91,15 @@ async def on_raw_reaction_add(payload):
         channel = await bot.fetch_channel(payload.channel_id)
         # get the message that was reacted to
         message = await channel.fetch_message(payload.message_id)
+        #if the stop sign is cicked
+        if(emoji.name == '🛑'):
+            #remove this flight from the flightArray-- someone selected to stop tracking this message
+            msgID = message.id
+            for flight in flightArray:
+                myID = flight[0].id
+                if(myID == msgID): 
+                    flightArray.remove(flight)
+                    return
         # this is the emoji the user chose, just as an int.
         emoteInt = emoteDict[emoji.name]
         # yoink the flight code
@@ -96,12 +107,15 @@ async def on_raw_reaction_add(payload):
         flightCode = (title)[16:(title.index('.'))]
         flightCode = flightCode.replace(" ", "")
         # print(flightCode)
+        #obtain our pertinent data
         try:
-            print("Getting flight data!")
+            #print("Getting flight data!")
+            #get the data from the api
             flightData = getFlight(flightCode)
         except flightData as er:
             print(er)
 
+        #bounds checking for our new data
         if (flightData == [] or flightData == None):
             # if the flight response is shit. this should, in theory, never be called. but i am afraid and have anxiety.
             myEmbed = discord.Embed(
@@ -109,7 +123,7 @@ async def on_raw_reaction_add(payload):
         else:
             # here we have a array of dictionaries
             flightData = flightData[emoteInt - 1]
-            print(flightData)
+            #print(flightData)
             # information setup
             flightID = str(flightData["flightID"])
             flightDelay = str(flightData["Delay"])
@@ -162,8 +176,8 @@ async def on_raw_reaction_add(payload):
             ]
 
             myEmbed = discord.Embed(
-                title=f"Flight Tracker: {flightDepCode} ✈️ {flightArvCode}", color=0x008080)
-            if (int(flightDelay) > 0):
+                title=f"{flightDepCode} ✈️ {flightArvCode}", color=0x008080)
+            if (int(flightDelay) > 0 and int(flightDelay) < 1250):
                 myEmbed.add_field(
                     name="Delay", value=f"{flightDelay} minute(s).", inline=False)
 
@@ -171,16 +185,22 @@ async def on_raw_reaction_add(payload):
                               value=f"{formattedDeaprture} -> {formattedArrival}", inline=False)
 
             myEmbed.add_field(name="Departing Gate & Terminal",
-                              value=f"Terminal: {flightDepTerm} Gate: {flightDepGate}", inline=False)
+                              value=f"Terminal: {flightDepTerm} \nGate: {flightDepGate}", inline=False)
             myEmbed.add_field(name="Arriving Gate & Terminal",
-                              value=f"Terminal: {flightArvTerm} Gate: {flightArvGate}", inline=False)
+                              value=f"Terminal: {flightArvTerm} \nGate: {flightArvGate}", inline=False)
         #print((message.embeds)[0].fields[emoteInt- 1].value)
-        myMessage = await message.reply(embed=myEmbed)
+        depAirportCoords = airports[flightDepCode]['location']
+        arvAirportCoords = airports[flightArvCode]['location']
+        locationData = getFlightLocation(flightRegistration)
+        planeCoords = (locationData['lat'], locationData['lon'])
         FAID = flightData["FAID"]
         routes = getFlightRoute(flightData["FAID"])
+        mapURL = getMap(depAirportCoords, arvAirportCoords, planeCoords, routes)
+        myEmbed.set_image(url=mapURL)
+        myMessage = await message.reply(embed=myEmbed)
+        #print("My route: " + str(routes))
+        # prepare data for database insertion
         routes = json.dumps(routes)
-        print("My route: " + str(routes))
-        # insert data into database
         data = (
             data[0],
             data[1],
@@ -205,129 +225,135 @@ async def on_raw_reaction_add(payload):
             routes
         )
         try:
+            #add our nicely-formatted data to the database and our live flight info array.
             addToFlightDB(data)
+            flightArray.append([myMessage, data])
         except sqlite3.Error as er:
             print(er)
 
-        # start the task that updates our message
-        updateTask.start(myMessage)
+        
         # add the stop sign as a clickable button to signify a user would like to stop tracking a flight
         await myMessage.add_reaction('🛑')
-        loop = asyncio.get_event_loop()
-        await loop.run_until_complete(testThread(message))
-        #timer = threading.Timer(10.0, testThread, args=(message,))
-        #timer.start()
+        #start the loop. this will break when a new user contacts the bot, but will instantly recover. god bless python.
+        #await multiUpdate()
         return
 
-#@bot.event
-async def testThread(message):
-    print(type(message))
-    currentTime = strftime("%H:%M:%S", localtime())
-    await message.reply("Current Time : " + str(currentTime))
-    return
+@bot.event
+async def multiUpdate():
+    myData = getDiscordFlights()
 
+    for flight in flightArray:
+        #use the channel ID and message ID to make the message object
+        myMessage = flight[0]
+        flight[1] = getFlightMessageViaMID(myMessage.id)[0]
+        myData = flight[1]
 
-
-@tasks.loop(minutes=5)
-async def updateTask(message):
-    # get the flight data for this message
-    myData = getFlightMessageViaMID(message.id)
-    # this is a dictionary of tuples, we only need the first tuple
-    myData = myData[0]
-
-    # Begin Embed Construction
-    myEmbed = discord.Embed(
-        title=f"{myData[13]} ✈️ {myData[12]}", color=0x008080)
-
-    # Cases:
-    # Case 1: flight has landed.
-    # Case 2: Flight is en route
-    # Case 3: Flight is waiting to depart.
-    if myData[19] == "Yes":
-        #print("Flight has landed!")
-        myEmbed.add_field(name="Your flight has landed! Safe travels!",
+        # Begin Embed Construction
+        myEmbed = discord.Embed(title=f"{myData[13]} ✈️ {myData[12]}", color=0x008080)
+        # Cases:
+        # Case 1: flight has landed.
+        # Case 2: Flight is en route
+        # Case 3: Flight is waiting to depart.
+        if myData[19] == "Yes":
+            #print("Flight has landed!")
+            myEmbed.add_field(name="Your flight has landed! Safe travels!",
                           value="Thank you for using Flighty!", inline=False)
-        myEmbed.set_image(
-            url="https://media.discordapp.net/attachments/322582394416791553/1042503782568837292/flightLanded.jpg?width=701&height=701")
-    # if the plane is currently en route
-    elif myData[18] == "Yes" and myData[19] == "No":
-        #print("Flight is en route.")
-        arvAirportCoords = airports[myData[12]]['location']
-        depAirportCoords = airports[myData[13]]['location']
-        #print("MY ORIGIN AIRPORT COoRDS IS: " + str(arvAirportCoords))
-        #debug / testing
-        print("MY DATA: " + str(myData))
+            myEmbed.set_image(
+                url="https://media.discordapp.net/attachments/322582394416791553/1042503782568837292/flightLanded.jpg?width=701&height=701")
+            flightArray.remove(flight)
+        # if the plane is currently en route
+        elif myData[18] == "Yes" and myData[19] == "No":
+            #print("Flight is en route.")
+            arvAirportCoords = airports[myData[12]]['location']
+            depAirportCoords = airports[myData[13]]['location']
+            #print("MY ORIGIN AIRPORT COoRDS IS: " + str(arvAirportCoords))
+            #debug / testing
+            #print("MY DATA: " + str(myData))
 
-        flightCode = myData[3]
-        registration = myData[16]
+            #some data that was good to have on-hand in the form of variables
+            flightCode = myData[3]
+            registration = myData[16]
 
-        # time processing
-        ArvTime = zulu.parse(myData[7])
-        DepTime = zulu.parse(myData[6])
+            # time processing
+            ArvTime = zulu.parse(myData[7])
+            DepTime = zulu.parse(myData[6])
 
-        formattedArrival = ArvTime.format('%I:%M %p %Z', tz=myData[14])
-        formattedDeaprture = DepTime.format('%I:%M %p %Z', tz=myData[15])
+            #convert zulu times from the API to respective times in their time zones
+            formattedArrival = ArvTime.format('%I:%M %p %Z', tz=myData[14])
+            formattedDeaprture = DepTime.format('%I:%M %p %Z', tz=myData[15])
 
-        # if there is a reasonable (not bugged or impossible) delay, we show it to the user
-        delay = int(myData[5])
-        if (delay < 0 or delay > 2500):
-            myEmbed.add_field(
-                name="Delay", value=f"{myData[5]} minute(s).", inline=False)
+            # if there is a reasonable (not bugged or impossible) delay, we show it to the user
+            delay = int(myData[5])
+            if (delay > 0 and delay < 1250):
+                myEmbed.add_field(
+                    name="Delay", value=f"{myData[5]} minute(s).", inline=False)
 
-        # show departure, arrivval information
-        myEmbed.add_field(name="Departure & Arrival",
-                          value=f"{formattedDeaprture} -> {formattedArrival}", inline=False)
+            # show departure, arrivval information
+            myEmbed.add_field(name="Departure & Arrival",
+                value=f"{formattedDeaprture} -> {formattedArrival}", inline=False)
+            
+            #departure and arrival gate + terminal setup
+            myEmbed.add_field(name="Departing Gate & Terminal",
+                value=f"Terminal: {myData[8]} \nGate: {myData[9]}", inline=False)
+            myEmbed.add_field(name="Arriving Gate & Terminal",
+                value=f"Terminal: {myData[10]} \nGate: {myData[11]}", inline=False)
 
-        myEmbed.add_field(name="Departing Gate & Terminal",
-                          value=f"Terminal: {myData[8]} \nGate: {myData[9]}", inline=False)
-        myEmbed.add_field(name="Arriving Gate & Terminal",
-                          value=f"Terminal: {myData[10]} \nGate: {myData[11]}", inline=False)
+            # this was a temporary debug statement to make sure the message was updating correctly
+            #myEmbed.add_field(name="Last Update: ", value=f"{str(currentTime)}", inline=False)
 
-        currentTime = strftime("%H:%M", localtime())
+            # get the registration code, and location data. load in the route list.
+            flightRegistration = myData[16]
+            locationData = getFlightLocation(flightRegistration)
+            planeCoords = (locationData['lat'], locationData['lon'])
+            #print("MY LOCATION DATA IS :" + str(planeCoords))
+            #print("MY LOCATION DATA TYPE IS: " + str(type(planeCoords)))
+            routes = myData[20]
+            routes = json.loads(routes)
+            #print("YOUR ROUTE IS: " + str(routes))
 
-        # this was a temporary debug statement to make sure the message was updating correctly
-        #myEmbed.add_field(name="Last Update: ", value=f"{str(currentTime)}", inline=False)
-
-        # get the registration code, and location data. load in the route list.
-        flightRegistration = myData[16]
-        locationData = getFlightLocation(flightRegistration)
-        planeCoords = (locationData['lat'], locationData['lon'])
-        #print("MY LOCATION DATA IS :" + str(planeCoords))
-        #print("MY LOCATION DATA TYPE IS: " + str(type(planeCoords)))
-        routes = myData[20]
-        routes = json.loads(routes)
-        #print("YOUR ROUTE IS: " + str(routes))
-
-        # get the url that pertains to our map
-        mapURL = getMap(depAirportCoords, arvAirportCoords,
-                        planeCoords, routes)
-        #urllib.request.urlretrieve(mapURL, "FlightMapREDACTED.jpg")
-        #print("YOUR FLIGHT LOCATNON IS: " + str(locationData))
-        latitude = None
-        longitude = None
-        if (locationData == {} or locationData == None):
-            print("There was an error retrieving the flight location data.")
-        else:
-            latitude = locationData["lat"]
-            longitude = locationData["lon"]
+            # get the url that pertains to our map
+            mapURL = getMap(depAirportCoords, arvAirportCoords,
+                planeCoords, routes)
+            
+            #get lat and long
+            latitude = None
+            longitude = None
+            if (locationData == {} or locationData == None):
+                print("There was an error retrieving the flight location data.")
+            else:
+                latitude = locationData["lat"]
+                longitude = locationData["lon"]
+            
+            #testing statement to ensure latitude and longitude are working correctly
             #myEmbed.add_field(name="Position", value=f"Latitude: {latitude} Longitude: {longitude}", inline=False)
+            #set the image accordingly
+            myEmbed.set_image(url=mapURL)
+        elif myData[19] == "No":
+            # here is if the flight has not departed
+            #print("Flight not departed.")
+            myEmbed.add_field(name="Your flight has not departed yet! Hang tight!",
+                value="Thank you for using Flighty!", inline=False)
+            myEmbed.set_image(
+                url="https://media.discordapp.net/attachments/322582394416791553/1042503782833061928/waitForDepart.jpg?width=701&height=701")
+        # update the message
+        await myMessage.edit(embed=myEmbed)
 
-        myEmbed.set_image(url=mapURL)
-    elif myData[19] == "No":
-        # here is if the flight has not departed
-        #print("Flight not departed.")
-        myEmbed.add_field(name="Your flight has not departed yet! Hang tight!",
-                          value="Thank you for using Flighty!", inline=False)
-        myEmbed.set_image(
-            url="https://media.discordapp.net/attachments/322582394416791553/1042503782833061928/waitForDepart.jpg?width=701&height=701")
-    # update the message
-    await message.edit(embed=myEmbed)
+    #set the timer, repeat endlessly
+    await asyncio.sleep(5 * 60)
+    await multiUpdate()
     return
 
+@bot.event
+async def on_ready():
+    print("Bot is ready!")
+    await multiUpdate()
 
 def main():
+    #load all our keys from credentials
     loadKeys("backend/credentials.txt")
+    #print statement so ben feels good about himself
     print("Starting Discord bot!")
+    #run the bot
     bot.run(getKey("Discord"))
 
 
