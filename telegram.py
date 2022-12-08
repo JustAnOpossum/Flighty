@@ -13,10 +13,12 @@ from telebot import types
 from telebot.types import InlineKeyboardButton
 import geopy.distance
 
+# Global to keep track of the selected flights
 selectedFlight = {}
 
 
 def main():
+    # Variable to keep track of what command a user has selected
     currentFlightUsers = {}
 
     loadKeys("backend/credentials.txt")
@@ -26,10 +28,10 @@ def main():
     @bot.message_handler(commands=['start', 'help'])
     def send_welcome(message):
         bot.send_message(
-            message.chat.id, "Welcome to flighty! Use /trackFlight to track a flight or many flights.", parse_mode="markdown")
+            message.chat.id, "Welcome to flighty! Use /trackflight to track a flight or many flights.", parse_mode="markdown")
 
     # Handles the track flight command
-    @bot.message_handler(commands=['trackFlight'])
+    @bot.message_handler(commands=['trackflight'])
     def trackFlight(message):
         bot.send_message(
             message.chat.id, "Please send me your flight number, ex: UA123")
@@ -194,9 +196,9 @@ def main():
 def updateMsg(firstMsg):
     loadKeys("backend/credentials.txt")
     bot = telebot.TeleBot(getKey("Telegram"))
-    for user in getUsers():
+    for message in getMsgs():
         utc = pytz.UTC
-        flightMsgs = getFlightMessage(user[0])
+        flightMsgs = getFlightMessage(message[0])
         count = 0
         # Loops though all flights for a user
         for flightMsg in flightMsgs:
@@ -319,6 +321,7 @@ def updateMsg(firstMsg):
         timer.start()
 
 
+# For the buttons gets the selected flight so that the update method knows what flight to update
 def getSelectedFlight(msgID, chatID):
     # Create the message in the object
     if msgID not in selectedFlight:
@@ -332,9 +335,11 @@ def getSelectedFlight(msgID, chatID):
     return selectedFlight[msgID]['selectedFlight']
 
 
+# Edits the photo for the flight message
 def editPhotoMessage(msgID, chatID, newPhotoURL, inlineKeyboard, bot, text):
     photoToSend = types.InputMediaPhoto(
         newPhotoURL)
+    # Media must be edited first
     bot.edit_message_media(chat_id=chatID,
                            message_id=msgID, media=photoToSend)
     bot.edit_message_caption(chat_id=chatID,
